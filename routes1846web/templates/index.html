@@ -1,0 +1,96 @@
+{% extends "layout.html" %}
+
+{% block body %}
+<div>
+    <div style="float: left; margin-left: 100px;">
+        <label style="display: block;">Placed Tiles</label>
+        <div id="placed-tiles-table"></div>
+    </div>
+    <div style="float: left; margin-left: 100px;">
+        <label style="display: block;">Railroads</label>
+        <div id="railroads-table"></div>
+    </div>
+    <div style="float: left;  margin-left: 100px; margin-top: 30px;">
+        <div style="float: left;">
+            <div style="float: left;">
+                <div class="form-group">
+                    <select id="railroad-name" class="custom-select">
+                    </select>
+                </div>
+                <!--
+                <input id="railroad-name" type="text" name="railroad-name" placeholder="Railroad name..." />
+                -->
+            </div>
+            <div style="float: left; margin-left: 50px;">
+                <button id="calculate-submit" class="btn btn-primary">Calculate</button>
+            </div>
+        </div>
+        <div style="clear: both;">&nbsp;</div>
+        <div style="float: left;">
+            <p>Routes</p>
+            <ul id="route-list"></ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+$("#calculate-submit").click(function() {
+    var postData = {
+        "railroads-json": JSON.stringify(railroadsTableData),
+        "board-state-json": JSON.stringify(placedTilesTableData),
+        "railroad-name": $("#railroad-name").val()
+    }
+    $.post("{{ url_for('calculate') }}", postData)
+        .done(function(resultJson) {
+            for (train in resultJson) {
+                $("<li />")
+                    .text(train + ": " + resultJson[train]["route"].join(", ") + " (" + resultJson[train]["value"] + ")")
+                    .appendTo($("#route-list"));
+            }
+        })
+        .fail(function(jqXHR, textStatus) {
+            alert(textStatus);
+        });
+});
+
+var placedTilesTableData = [['', '', '']];
+// var placedTilesTableData = [Array(3).fill('')];
+var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-table"), {
+    data: placedTilesTableData,
+    rowHeaders: false,
+    colHeaders: {{ placed_tiles_colnames | safe }},
+    startRows: 1,
+    minSpareRows: 1,
+    contextMenu: true
+});
+
+var railroadsTableData = [['', '', '', '']];
+var railroadsTable = new Handsontable(document.getElementById("railroads-table"), {
+    data: railroadsTableData,
+    rowHeaders: false,
+    colHeaders: {{ railroads_colnames | safe }},
+    startRows: 1,
+    minSpareRows: 1,
+    contextMenu: true,
+    afterChange: (changes) => {
+        if (changes !== null) {
+            var selectedRailroad = $("#railroad-name option:selected").val();
+            var railroadNames = railroadsTableData.map(row => row[0]).filter(name => name);
+
+            railroadNames = railroadNames.filter((name, index) => railroadNames.indexOf(name) >= index);
+            railroadNames.sort();
+
+            $("#railroad-name").empty();
+            for (index in railroadNames) {
+                $("#railroad-name").append(
+                    $("<option></option>")
+                        .attr("name", railroadNames[index])
+                        .text(railroadNames[index]));
+            }
+            $("#railroad-name").val(selectedRailroad);
+        }
+    }
+});
+
+{% endblock %}
