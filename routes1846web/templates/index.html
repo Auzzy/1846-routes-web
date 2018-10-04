@@ -14,12 +14,8 @@
         <div style="float: left;">
             <div style="float: left;">
                 <div class="form-group">
-                    <select id="railroad-name" class="custom-select">
-                    </select>
+                    <select id="railroad-name" class="custom-select" style="width: 190px;"></select>
                 </div>
-                <!--
-                <input id="railroad-name" type="text" name="railroad-name" placeholder="Railroad name..." />
-                -->
             </div>
             <div style="float: left; margin-left: 50px;">
                 <button id="calculate-submit" class="btn btn-primary">Calculate</button>
@@ -54,7 +50,7 @@ $("#calculate-submit").click(function() {
         });
 });
 
-var placedTilesTableData = [['', '', '']];
+var placedTilesTableData = [[null, null, null]];
 // var placedTilesTableData = [Array(3).fill('')];
 var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-table"), {
     data: placedTilesTableData,
@@ -62,10 +58,62 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
     colHeaders: {{ placed_tiles_colnames | safe }},
     startRows: 1,
     minSpareRows: 1,
-    contextMenu: true
+    contextMenu: true,
+    columns: [
+        {
+            type: 'dropdown',
+            allowInvalid: false,
+            source: {{ tile_coords | safe }}
+        },
+        {
+            type: 'dropdown',
+            allowInvalid: false,
+            source: []
+        },
+        {
+            type: 'dropdown',
+            allowInvalid: false,
+            source: []
+        }
+    ],
+    afterChange: (changes, source) => {
+        if (changes !== null) {
+            changes.forEach(([row, col, oldValue, newValue]) => {
+                if (col === 0) {
+                    placedTilesTableData[row][1] = null;
+                    placedTilesTableData[row][2] = null;
+                    placedTilesTable.render();
+
+                    placedTilesTable.setCellMeta(row, 1, "source", function(query, process) {
+                        var coord = placedTilesTableData[row][0];
+                        $.get("{{ url_for('legal_tiles') }}", {coord: coord, query: query})
+                            .done(function(result) {
+                                process(result["legal-tile-ids"]);
+                            });
+                    });
+                }
+
+                if (col === 1) {
+                    placedTilesTableData[row][2] = null;
+                    placedTilesTable.render();
+
+                    placedTilesTable.setCellMeta(row, 2, "source", function(query, process) {
+                        var coord = placedTilesTableData[row][0];
+                        var tileId = placedTilesTableData[row][1];
+                        $.get("{{ url_for('legal_orientations') }}", {coord: coord, tileId: tileId, query: query})
+                            .done(function(result) {
+                                process(result["legal-orientations"]);
+                            });
+                    });
+                }
+            });
+        }
+    }
 });
 
-var railroadsTableData = [['', '', '', '']];
+var chicagoStationEdges = {{ chicago_stations | safe }};
+var chicago = "D6";
+var railroadsTableData = [[null, null, null, null]];
 var railroadsTable = new Handsontable(document.getElementById("railroads-table"), {
     data: railroadsTableData,
     rowHeaders: false,
@@ -73,22 +121,66 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
     startRows: 1,
     minSpareRows: 1,
     contextMenu: true,
+    columns: [
+        {
+            type: 'dropdown',
+            allowInvalid: false,
+            source: {{ railroad_names | safe }},
+            width: 170
+        },
+        {
+            type: 'dropdown',
+            allowInvalid: false,
+            source: {{ trains | safe }},
+            width: 60
+        },
+        {
+            type: 'dropdown',
+            allowInvalid: false,
+            source: {{ cities | safe }}
+        },
+        {
+            type: 'dropdown',
+            allowInvalid: false,
+            source: []
+        }
+    ],
     afterChange: (changes) => {
         if (changes !== null) {
-            var selectedRailroad = $("#railroad-name option:selected").val();
-            var railroadNames = railroadsTableData.map(row => row[0]).filter(name => name);
-
-            railroadNames = railroadNames.filter((name, index) => railroadNames.indexOf(name) >= index);
-            railroadNames.sort();
-
-            $("#railroad-name").empty();
-            for (index in railroadNames) {
-                $("#railroad-name").append(
-                    $("<option></option>")
-                        .attr("name", railroadNames[index])
-                        .text(railroadNames[index]));
+            if (changes.some(([row, col, oldValue, newValue]) => col === 0)) {
+                var selectedRailroad = $("#railroad-name option:selected").val();
+                var railroadNames = railroadsTableData.map(row => row[0]).filter(name => name);
+    
+                railroadNames = railroadNames.filter((name, index) => railroadNames.indexOf(name) >= index);
+                railroadNames.sort();
+    
+                $("#railroad-name").empty();
+                for (index in railroadNames) {
+                    $("#railroad-name").append(
+                        $("<option></option>")
+                            .attr("name", railroadNames[index])
+                            .text(railroadNames[index]));
+                }
+                $("#railroad-name").val(selectedRailroad);
             }
-            $("#railroad-name").val(selectedRailroad);
+            if (changes.some(([row, col, oldValue, newValue]) => col === 3)) {
+                placedChicagoStations = railroadsTableData.map(row => row[3]);
+                availableChicagoStations = chicagoStationEdges.filter(edge => placedChicagoStations.indexOf(edge) < 0);
+                for (row in railroadsTableData) {
+                    railroadsTable.setCellMeta(row, 3, "source", availableChicagoStations);
+                }
+            }
+            changes.forEach(([row, col, oldValue, newValue]) => {
+                if (col === 2) {
+                    if (newValue === chicago) {
+                        railroadsTable.setCellMeta(row, 3, "source", chicagoStationEdges);
+                    } else {
+                        railroadsTable.setCellMeta(row, 3, "source", []);
+                        railroadsTableData[row][3] = null;
+                        railroadsTable.render();
+                    }
+                }
+            });
         }
     }
 });
