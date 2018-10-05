@@ -9,7 +9,7 @@ from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell
 from routes1846web.routes1846web import app
 
 
-CHICAGO_STATION_EDGES = [1, 4, 5, 6]
+CHICAGO_STATION_EDGES = {1, 4, 5, 6}
 RAILROAD_NAMES = [
     "Baltimore & Ohio",
     "Illinois Central",
@@ -46,21 +46,11 @@ def main():
             if not space or (space.phase and space.phase < 4):
                 tile_coords.append(coord)
 
-    trains = [str(railroads.Train(collect, visit, None)) for collect, visit in sorted(railroads.TRAIN_TO_PHASE)]
-
-    from routes1846 import boardtile
-    cities = [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.is_city and not tile.is_terminal_city]
-
-    print(_get_space(str(CHICAGO_CELL)).paths())
-
     return render_template("index.html",
             railroads_colnames=json.dumps(RAILROADS_COLUMN_NAMES),
             placed_tiles_colnames=json.dumps(PLACED_TILES_COLUMN_NAMES),
             tile_coords=json.dumps(tile_coords),
-            railroad_names=json.dumps(RAILROAD_NAMES),
-            trains=json.dumps(trains),
-            cities=json.dumps(cities),
-            chicago_stations=json.dumps(CHICAGO_STATION_EDGES))
+            railroad_names=json.dumps(RAILROAD_NAMES))
 
 @app.route("/calculate", methods=["POST"])
 def calculate():
@@ -105,7 +95,7 @@ def _get_orientations(coord, tile_id):
 
     return orientations
 
-@app.route("/legal-tiles")
+@app.route("/board/legal-tiles")
 def legal_tiles():
     query = request.args.get("query")
     coord = request.args.get("coord")
@@ -132,16 +122,35 @@ def legal_tiles():
 
     return jsonify({"legal-tile-ids": legal_tile_ids})
 
-@app.route("/legal-orientations")
+@app.route("/board/legal-orientations")
 def legal_orientations():
     query = request.args.get("query")
     coord = request.args.get("coord")
     tile_id = request.args.get("tileId")
 
     orientations = _get_orientations(coord, tile_id)
-    
-    orientations.sort()
-    if query:
-        orientations = [orientation for orientation in orientations if str(orientation).startswith(query)]
+    return jsonify({"legal-orientations": list(sorted(orientations))})
 
-    return jsonify({"legal-orientations": orientations})
+@app.route("/railroads/trains")
+def trains():
+    trains = [str(railroads.Train(collect, visit, None)) for collect, visit in sorted(railroads.TRAIN_TO_PHASE)]
+    return jsonify({"trains": trains})
+
+@app.route("/railroads/cities")
+def cities():
+    query = request.args.get("query")
+
+    from routes1846 import boardtile
+    cities = [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.is_city and not tile.is_terminal_city]
+
+    if query:
+        cities = [city for city in cities if city.startswith(query)]
+
+    return jsonify({"cities": cities})
+
+@app.route("/railroads/legal-chicago-stations")
+def chicago_stations():
+    existing_station_edges = {edge for edge in json.loads(request.args.get("stations")) if edge}
+
+    legal_stations = CHICAGO_STATION_EDGES - existing_station_edges
+    return jsonify({"chicago-stations": list(legal_stations)})

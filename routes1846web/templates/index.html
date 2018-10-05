@@ -50,8 +50,27 @@ $("#calculate-submit").click(function() {
         });
 });
 
+
+function addSources(placedTilesTable, placedTilesTableData, row) {
+    placedTilesTable.setCellMeta(row, 1, "source", function(query, process) {
+        var coord = placedTilesTableData[row][0];
+        $.get("{{ url_for('legal_tiles') }}", {coord: coord})
+            .done(function(result) {
+                process(result["legal-tile-ids"]);
+            });
+    });
+    placedTilesTable.setCellMeta(row, 2, "source", function(query, process) {
+        var coord = placedTilesTableData[row][0];
+        var tileId = placedTilesTableData[row][1];
+        $.get("{{ url_for('legal_orientations') }}", {coord: coord, tileId: tileId})
+            .done(function(result) {
+                process(result["legal-orientations"]);
+            });
+    });
+}
+
 var placedTilesTableData = [[null, null, null]];
-// var placedTilesTableData = [Array(3).fill('')];
+// var placedTilesTableData = [Array(3).fill(null)];
 var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-table"), {
     data: placedTilesTableData,
     rowHeaders: false,
@@ -68,12 +87,14 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
         {
             type: 'dropdown',
             allowInvalid: false,
-            source: []
+            source: [],
+            editor: false
         },
         {
             type: 'dropdown',
             allowInvalid: false,
-            source: []
+            source: [],
+            editor: false
         }
     ],
     afterChange: (changes, source) => {
@@ -84,34 +105,29 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
                     placedTilesTableData[row][2] = null;
                     placedTilesTable.render();
 
-                    placedTilesTable.setCellMeta(row, 1, "source", function(query, process) {
-                        var coord = placedTilesTableData[row][0];
-                        $.get("{{ url_for('legal_tiles') }}", {coord: coord, query: query})
-                            .done(function(result) {
-                                process(result["legal-tile-ids"]);
-                            });
-                    });
+                    placedTilesTable.setCellMeta(row, 1, "editor", newValue === '' ? false : "dropdown");
+                    placedTilesTable.setCellMeta(row, 2, "editor", false);
                 }
 
                 if (col === 1) {
                     placedTilesTableData[row][2] = null;
+                    placedTilesTable.setCellMeta(row, 2, "editor", newValue === '' ? false : "dropdown");
                     placedTilesTable.render();
-
-                    placedTilesTable.setCellMeta(row, 2, "source", function(query, process) {
-                        var coord = placedTilesTableData[row][0];
-                        var tileId = placedTilesTableData[row][1];
-                        $.get("{{ url_for('legal_orientations') }}", {coord: coord, tileId: tileId, query: query})
-                            .done(function(result) {
-                                process(result["legal-orientations"]);
-                            });
-                    });
                 }
             });
         }
+    },
+    afterCreateRow: (index, amount) => {
+        Array.from(new Array(amount), i => i + amount).forEach(function(row) {
+            addSources(placedTilesTable, placedTilesTableData, row);
+        });
     }
 });
 
-var chicagoStationEdges = {{ chicago_stations | safe }};
+// Needed to add sources to the initial row, since it doesn't trigger afterCreateRow
+addSources(placedTilesTable, placedTilesTableData, 0);
+
+
 var chicago = "D6";
 var railroadsTableData = [[null, null, null, null]];
 var railroadsTable = new Handsontable(document.getElementById("railroads-table"), {
@@ -130,19 +146,38 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
         },
         {
             type: 'dropdown',
+            width: 60,
             allowInvalid: false,
-            source: {{ trains | safe }},
-            width: 60
+            source: function(query, process) {
+                $.get("{{ url_for('trains') }}")
+                    .done(function(result) {
+                        process(result["trains"]);
+                    });
+            },
+            editor: false
         },
         {
             type: 'dropdown',
             allowInvalid: false,
-            source: {{ cities | safe }}
+            source: function(query, process) {
+                $.get("{{ url_for('cities') }}")
+                    .done(function(result) {
+                        process(result["cities"]);
+                    });
+            },
+            editor: false
         },
         {
             type: 'dropdown',
             allowInvalid: false,
-            source: []
+            source: function(query, process) {
+                placedChicagoStations = railroadsTableData.map(row => row[3]);
+                $.get("{{ url_for('chicago_stations') }}", {stations: JSON.stringify(placedChicagoStations)})
+                    .done(function(result) {
+                        process(result["chicago-stations"]);
+                    });
+            },
+            editor: false
         }
     ],
     afterChange: (changes) => {
@@ -163,19 +198,20 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
                 }
                 $("#railroad-name").val(selectedRailroad);
             }
-            if (changes.some(([row, col, oldValue, newValue]) => col === 3)) {
-                placedChicagoStations = railroadsTableData.map(row => row[3]);
-                availableChicagoStations = chicagoStationEdges.filter(edge => placedChicagoStations.indexOf(edge) < 0);
-                for (row in railroadsTableData) {
-                    railroadsTable.setCellMeta(row, 3, "source", availableChicagoStations);
-                }
-            }
             changes.forEach(([row, col, oldValue, newValue]) => {
-                if (col === 2) {
-                    if (newValue === chicago) {
-                        railroadsTable.setCellMeta(row, 3, "source", chicagoStationEdges);
-                    } else {
-                        railroadsTable.setCellMeta(row, 3, "source", []);
+                if (col === 0) {
+                    railroadsTable.setCellMeta(row, 1, "editor", newValue === '' ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 2, "editor", newValue === '' ? false : "dropdown");
+                    if (newValue === '') {
+                        railroadsTable.setCellMeta(row, 3, "editor", false);
+                        railroadsTableData[row][1] = null;
+                        railroadsTableData[row][2] = null;
+                        railroadsTableData[row][3] = null;
+                        railroadsTable.render();
+                    }
+                } else if (col === 2) {
+                    railroadsTable.setCellMeta(row, 3, "editor", newValue === '' ? false : "dropdown");
+                    if (newValue !== chicago) {
                         railroadsTableData[row][3] = null;
                         railroadsTable.render();
                     }
