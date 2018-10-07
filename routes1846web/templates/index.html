@@ -157,13 +157,17 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
             editor: false
         },
         {
-            type: 'dropdown',
+            type: "dropdown",
             allowInvalid: false,
-            source: function(query, process) {
-                $.get("{{ url_for('cities') }}")
-                    .done(function(result) {
-                        process(result["cities"]);
-                    });
+            width: "150px",
+            chosenOptions: {
+                multiple: true,
+                data: function(query, process) {
+                    $.get("{{ url_for('cities') }}")
+                        .done(function(result) {
+                            process(result["cities"]);
+                        });
+                }
             },
             editor: false
         },
@@ -201,7 +205,7 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
             changes.forEach(([row, col, oldValue, newValue]) => {
                 if (col === 0) {
                     railroadsTable.setCellMeta(row, 1, "editor", newValue === '' ? false : "dropdown");
-                    railroadsTable.setCellMeta(row, 2, "editor", newValue === '' ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 2, "editor", newValue === '' ? false : "chosen");
                     if (newValue === '') {
                         railroadsTable.setCellMeta(row, 3, "editor", false);
                         railroadsTableData[row][1] = null;
