@@ -43,7 +43,7 @@ def main():
         for col in sorted(cols):
             coord = "{}{}".format(row, col)
             space = _get_space(coord)
-            if not space or (space.phase and space.phase < 4):
+            if not space or (space.phase is not None and space.phase < 4):
                 tile_coords.append(coord)
 
     return render_template("index.html",
