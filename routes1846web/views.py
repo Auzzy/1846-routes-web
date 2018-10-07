@@ -60,8 +60,10 @@ def calculate():
 
     board = boardstate.load([dict(zip(boardstate.FIELDNAMES, row)) for row in board_state_rows if any(val for val in row)])
     railroad_dict = railroads.load(board, [dict(zip(railroads.FIELDNAMES, row)) for row in railroads_state_rows if any(val for val in row)])
-
     board.validate()
+
+    if railroad_name not in railroad_dict:
+        raise ValueError("Railroad chosen: \"{}\". Valid railroads: {}".format(railroad_name, ", ".join(railroad_dict.keys())))
 
     best_routes = find_best_routes(board, railroad_dict, railroad_dict[railroad_name])
     routes_json = {}

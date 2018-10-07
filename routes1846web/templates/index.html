@@ -116,6 +116,8 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
                 }
             });
         }
+
+        $("#calculate-submit").prop("disabled", !readyToCalculate());
     },
     afterCreateRow: (index, amount) => {
         Array.from(new Array(amount), i => i + amount).forEach(function(row) {
@@ -126,7 +128,6 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
 
 // Needed to add sources to the initial row, since it doesn't trigger afterCreateRow
 addSources(placedTilesTable, placedTilesTableData, 0);
-
 
 var chicago = "D6";
 var railroadsTableData = [[null, null, null, null]];
@@ -214,7 +215,7 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
                         railroadsTable.render();
                     }
                 } else if (col === 2) {
-                    railroadsTable.setCellMeta(row, 3, "editor", newValue === '' ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 3, "editor", newValue.split(",").includes(chicago) ? "dropdown" : false);
                     if (newValue !== chicago) {
                         railroadsTableData[row][3] = null;
                         railroadsTable.render();
@@ -222,7 +223,38 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
                 }
             });
         }
+
+        $("#calculate-submit").prop("disabled", !readyToCalculate());
     }
 });
+
+$("#railroad-name").change(function() {
+    $("#calculate-submit").prop("disabled", !readyToCalculate());
+});
+
+
+function readyToCalculate() {
+    return placedTilesTableReady() &&
+        railroadsTableReady() &&
+        railroadSelected();
+}
+
+function placedTilesTableReady() {
+    return placedTilesTableData.length >= 2 &&
+        placedTilesTableData.every((row) => {
+            return row.every(col => col !== null) ||
+                   row.every(col => col === null);
+        });
+}
+
+function railroadsTableReady() {
+    return railroadsTableData.length >= 2 &&
+        railroadsTableData.every(row => row[2] === null || !row[2].includes(chicago) || row[3] !== null);
+}
+
+function railroadSelected() {
+    var railroadNames = railroadsTableData.map(railroad => railroad[0]).filter(railroad => railroad !== null);
+    return railroadNames.includes($("#railroad-name").val());
+}
 
 {% endblock %}
