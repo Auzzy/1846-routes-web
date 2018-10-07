@@ -111,8 +111,9 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
 
                 if (col === 1) {
                     placedTilesTableData[row][2] = null;
-                    placedTilesTable.setCellMeta(row, 2, "editor", newValue === '' ? false : "dropdown");
                     placedTilesTable.render();
+
+                    placedTilesTable.setCellMeta(row, 2, "editor", newValue === '' ? false : "dropdown");
                 }
             });
         }
@@ -120,7 +121,7 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
         $("#calculate-submit").prop("disabled", !readyToCalculate());
     },
     afterCreateRow: (index, amount) => {
-        Array.from(new Array(amount), i => i + amount).forEach(function(row) {
+        Array.from(new Array(amount).keys(), i => i + amount).forEach(function(row) {
             addSources(placedTilesTable, placedTilesTableData, row);
         });
     }
