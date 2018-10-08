@@ -31,9 +31,14 @@
 {% endblock %}
 
 {% block js %}
+function getTrains(row) {
+    var trainCells = row.slice(1, 5).filter(train => train !== null);
+    return trainCells.length > 0 ? trainCells.join(",") : null
+}
+
 $("#calculate-submit").click(function() {
     var postData = {
-        "railroads-json": JSON.stringify(railroadsTableData),
+        "railroads-json": JSON.stringify(railroadsTableData.map(row => [row[0], getTrains(row), row[5], row[6]])),
         "board-state-json": JSON.stringify(placedTilesTableData),
         "railroad-name": $("#railroad-name").val()
     }
@@ -69,12 +74,11 @@ function addSources(placedTilesTable, placedTilesTableData, row) {
     });
 }
 
-var placedTilesTableData = [[null, null, null]];
-// var placedTilesTableData = [Array(3).fill(null)];
+var placedTilesTableData = [new Array({{ placed_tiles_colnames | length }}).fill(null)];
 var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-table"), {
     data: placedTilesTableData,
     rowHeaders: false,
-    colHeaders: {{ placed_tiles_colnames | safe }},
+    colHeaders: {{ placed_tiles_colnames | tojson | safe }},
     startRows: 1,
     minSpareRows: 1,
     enterMoves: {row: 0, col: 1},
@@ -82,7 +86,7 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
         {
             type: 'dropdown',
             allowInvalid: false,
-            source: {{ tile_coords | safe }}
+            source: {{ tile_coords | tojson | safe }}
         },
         {
             type: 'dropdown',
@@ -130,12 +134,21 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
 // Needed to add sources to the initial row, since it doesn't trigger afterCreateRow
 addSources(placedTilesTable, placedTilesTableData, 0);
 
+{% set railroads_column_headers = [] -%}
+{%- for colname in railroads_colnames -%}
+{%- if colname == "trains" -%}
+{{- railroads_column_headers.extend(["train1", "train2", "train3", "train4"]) or "" -}}
+{%- else -%}
+{{- railroads_column_headers.append(colname) or "" -}}
+{%- endif -%}
+{%- endfor -%}
+
 var chicago = "D6";
-var railroadsTableData = [[null, null, null, null]];
+var railroadsTableData = [new Array({{ railroads_column_headers | length }}).fill(null)];
 var railroadsTable = new Handsontable(document.getElementById("railroads-table"), {
     data: railroadsTableData,
     rowHeaders: false,
-    colHeaders: {{ railroads_colnames | safe }},
+    colHeaders: {{ railroads_column_headers | tojson | safe }},
     startRows: 1,
     minSpareRows: 1,
     enterMoves: {row: 0, col: 1},
@@ -143,13 +156,14 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
         {
             type: 'dropdown',
             allowInvalid: false,
-            source: {{ railroad_names | safe }},
+            source: {{ railroad_names | tojson | safe }},
             width: 170
         },
+        {% for num in range(4) -%}
         {
             type: 'dropdown',
-            width: 60,
             allowInvalid: false,
+            width: 60,
             source: function(query, process) {
                 $.get("{{ url_for('trains') }}")
                     .done(function(result) {
@@ -158,10 +172,11 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
             },
             editor: false
         },
+        {% endfor -%}
         {
             type: "dropdown",
             allowInvalid: false,
-            width: "175px",
+            width: 180,
             chosenOptions: {
                 multiple: true,
                 data: function(query, process) {
@@ -207,18 +222,24 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
             changes.forEach(([row, col, oldValue, newValue]) => {
                 if (col === 0) {
                     railroadsTable.setCellMeta(row, 1, "editor", newValue === '' ? false : "dropdown");
-                    railroadsTable.setCellMeta(row, 2, "editor", newValue === '' ? false : "chosen");
+                    railroadsTable.setCellMeta(row, 2, "editor", newValue === '' ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 3, "editor", newValue === '' ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 4, "editor", newValue === '' ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 5, "editor", newValue === '' ? false : "chosen");
                     if (newValue === '') {
                         railroadsTable.setCellMeta(row, 3, "editor", false);
                         railroadsTableData[row][1] = null;
                         railroadsTableData[row][2] = null;
                         railroadsTableData[row][3] = null;
+                        railroadsTableData[row][4] = null;
+                        railroadsTableData[row][5] = null;
+                        railroadsTableData[row][6] = null;
                         railroadsTable.render();
                     }
-                } else if (col === 2) {
-                    railroadsTable.setCellMeta(row, 3, "editor", newValue.split(",").includes(chicago) ? "dropdown" : false);
+                } else if (col === 5) {
+                    railroadsTable.setCellMeta(row, 6, "editor", newValue.split(",").includes(chicago) ? "dropdown" : false);
                     if (newValue !== chicago) {
-                        railroadsTableData[row][3] = null;
+                        railroadsTableData[row][6] = null;
                         railroadsTable.render();
                     }
                 }
@@ -250,7 +271,7 @@ function placedTilesTableReady() {
 
 function railroadsTableReady() {
     return railroadsTableData.length >= 2 &&
-        railroadsTableData.every(row => row[2] === null || !row[2].includes(chicago) || row[3] !== null);
+        railroadsTableData.every(row => row[5] === null || !row[5].includes(chicago) || row[6] !== null);
 }
 
 function railroadSelected() {

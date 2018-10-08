@@ -59,6 +59,11 @@
     var onChosenChanged = function () {
         var options = this.cellProperties.chosenOptions;
 
+        $(".chosen-drop .chosen-results .result-selected").each(function(index, element) {
+            $(element).removeClass("result-selected");
+            $(element).addClass("active-result");
+        });
+
         if (!options.multiple) {
             this.close();
             this.finishEditing();

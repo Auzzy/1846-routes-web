@@ -47,10 +47,10 @@ def main():
                 tile_coords.append(coord)
 
     return render_template("index.html",
-            railroads_colnames=json.dumps(RAILROADS_COLUMN_NAMES),
-            placed_tiles_colnames=json.dumps(PLACED_TILES_COLUMN_NAMES),
-            tile_coords=json.dumps(tile_coords),
-            railroad_names=json.dumps(RAILROAD_NAMES))
+            railroads_colnames=RAILROADS_COLUMN_NAMES,
+            placed_tiles_colnames=PLACED_TILES_COLUMN_NAMES,
+            tile_coords=tile_coords,
+            railroad_names=RAILROAD_NAMES)
 
 @app.route("/calculate", methods=["POST"])
 def calculate():
