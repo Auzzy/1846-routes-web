@@ -1,32 +1,48 @@
 {% extends "layout.html" %}
 
 {% block body %}
-<div>
-    <div style="float: left; margin-left: 100px;">
-        <label style="display: block;">Placed Tiles</label>
-        <div id="placed-tiles-table"></div>
-    </div>
-    <div style="float: left; margin-left: 100px;">
-        <label style="display: block;">Railroads</label>
-        <div id="railroads-table"></div>
-    </div>
-    <div style="float: left;  margin-left: 100px; margin-top: 30px;">
-        <div style="float: left;">
-            <div style="float: left;">
-                <div class="form-group">
-                    <select id="railroad-name" class="custom-select" style="width: 190px;"></select>
-                </div>
-            </div>
-            <div style="float: left; margin-left: 50px;">
-                <button id="calculate-submit" class="btn btn-primary">Calculate</button>
-            </div>
+<h2>1846 Route Calculator</h2>
+<ul class="nav nav-tabs" id="routes-tabs" role="tablist">
+  <li class="nav-item">
+    <a class="nav-link active" id="placed-tiles-tab" data-toggle="tab" href="#placed-tiles" role="tab" aria-controls="placed-tiles" aria-selected="true">Placed Tiles</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" id="railroads-tab" data-toggle="tab" href="#railroads" role="tab" aria-controls="railroads" aria-selected="false">Railroads</a>
+  </li>
+  <li>
+    <button id="calculate-submit" class="btn btn-success" data-toggle="modal" data-target="#routeModal" style="margin-left:10px;">Calculate</button>
+  </li>
+</ul>
+
+<div class="tab-content" id="routes-tabs-content" style="margin-left: 50px; margin-top: 30px;">
+  <div class="tab-pane fade show active" id="placed-tiles" role="tabpanel" aria-labelledby="placed-tiles-tab">
+    <div id="placed-tiles-table"></div>
+  </div>
+  <div class="tab-pane fade" id="railroads" role="tabpanel" aria-labelledby="railroads-tab">
+    <div id="railroads-table"></div>
+  </div>
+</div>
+
+<div class="modal fade" id="routeModal" tabindex="-1" role="dialog" aria-labelledby="routeModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="form-group">
+          <div>Best routes for</div> <select id="railroad-name" class="custom-select" style="width: 190px;"></select>
         </div>
-        <div style="clear: both;">&nbsp;</div>
-        <div style="float: left;">
-            <p>Routes</p>
-            <ul id="route-list"></ul>
-        </div>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <ul id="route-list"></ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -36,7 +52,7 @@ function getTrains(row) {
     return trainCells.length > 0 ? trainCells.join(",") : null
 }
 
-$("#calculate-submit").click(function() {
+$("#railroad-name").change(function() {
     var postData = {
         "railroads-json": JSON.stringify(railroadsTableData.map(row => [row[0], getTrains(row), row[5], row[6]])),
         "board-state-json": JSON.stringify(placedTilesTableData),
@@ -44,6 +60,7 @@ $("#calculate-submit").click(function() {
     }
     $.post("{{ url_for('calculate') }}", postData)
         .done(function(resultJson) {
+            $("#route-list").empty();
             for (train in resultJson) {
                 $("<li />")
                     .text(train + ": " + resultJson[train]["route"].join(", ") + " (" + resultJson[train]["value"] + ")")
@@ -250,15 +267,19 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
     }
 });
 
-$("#railroad-name").change(function() {
-    $("#calculate-submit").prop("disabled", !readyToCalculate());
+// Handsontable isn't properly displayed due to being hidden. Rendering once it's visible solves the problem.
+$("#placed-tiles-tab").on("shown.bs.tab", function(e) {
+    placedTilesTable.render();
+});
+
+$("#railroads-tab").on("shown.bs.tab", function(e) {
+    railroadsTable.render();
 });
 
 
 function readyToCalculate() {
     return placedTilesTableReady() &&
-        railroadsTableReady() &&
-        railroadSelected();
+        railroadsTableReady();
 }
 
 function placedTilesTableReady() {
@@ -272,11 +293,6 @@ function placedTilesTableReady() {
 function railroadsTableReady() {
     return railroadsTableData.length >= 2 &&
         railroadsTableData.every(row => row[5] === null || !row[5].includes(chicago) || row[6] !== null);
-}
-
-function railroadSelected() {
-    var railroadNames = railroadsTableData.map(railroad => railroad[0]).filter(railroad => railroad !== null);
-    return railroadNames.includes($("#railroad-name").val());
 }
 
 {% endblock %}
