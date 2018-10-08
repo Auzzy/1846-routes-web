@@ -121,7 +121,7 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
         $("#calculate-submit").prop("disabled", !readyToCalculate());
     },
     afterCreateRow: (index, amount) => {
-        Array.from(new Array(amount).keys(), i => i + amount).forEach(function(row) {
+        Array.from(new Array(amount).keys(), i => i + index).forEach(function(row) {
             addSources(placedTilesTable, placedTilesTableData, row);
         });
     }
