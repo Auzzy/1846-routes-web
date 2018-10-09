@@ -60,14 +60,22 @@ $("#railroad-name").change(function() {
     }
     $.post("{{ url_for('calculate') }}", postData)
         .done(function(resultJson) {
-            $("#route-list").empty();
-            for (train in resultJson) {
-                $("<li />")
-                    .text(train + ": " + resultJson[train]["route"].join(", ") + " (" + resultJson[train]["value"] + ")")
+            if ("routes" in resultJson) {
+                $("#route-list").empty();
+                for (train in resultJson["routes"]) {
+                    var trainRoute = resultJson["routes"][train];
+                    $("<li />")
+                        .text(train + ": " + trainRoute["route"].join(", ") + " (" + trainRoute["value"] + ")")
+                        .appendTo($("#route-list"));
+                }
+            } else if ("error" in resultJson) {
+                $("<div />")
+                    .css("color", "red")
+                    .text(resultJson["error"])
                     .appendTo($("#route-list"));
             }
         })
-        .fail(function(jqXHR, textStatus) {
+        .fail(function(jqXHR, textStatus, errorThrown) {
             alert(textStatus);
         });
 });
