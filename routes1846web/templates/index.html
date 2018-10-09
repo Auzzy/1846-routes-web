@@ -29,6 +29,7 @@
       <div class="modal-header">
         <div class="form-group">
           <div>Best routes for</div> <select id="railroad-name" class="custom-select" style="width: 190px;"></select>
+          <span id="reload-calculate" class="oi oi-reload" title="reload" aria-hidden="true" style="display: none;"></span>
         </div>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
@@ -39,7 +40,6 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Save changes</button>
       </div>
     </div>
   </div>
@@ -52,7 +52,11 @@ function getTrains(row) {
     return trainCells.length > 0 ? trainCells.join(",") : null
 }
 
-$("#railroad-name").change(function() {
+function calculate() {
+    if (!readyToCalculate()) {
+        return;
+    }
+
     var postData = {
         "railroads-json": JSON.stringify(railroadsTableData.map(row => [row[0], getTrains(row), row[5], row[6]])),
         "board-state-json": JSON.stringify(placedTilesTableData),
@@ -69,6 +73,7 @@ $("#railroad-name").change(function() {
                         .appendTo($("#route-list"));
                 }
             } else if ("error" in resultJson) {
+                $("#route-list").empty();
                 $("<div />")
                     .css("color", "red")
                     .text(resultJson["error"])
@@ -78,8 +83,16 @@ $("#railroad-name").change(function() {
         .fail(function(jqXHR, textStatus, errorThrown) {
             alert(textStatus);
         });
-});
+}
 
+
+$("#railroad-name").change(function() {
+    calculate();
+    if (readyToCalculate()) {
+        $("#reload-calculate").show();
+    }
+});
+$("#reload-calculate").click(calculate);
 
 function addSources(placedTilesTable, placedTilesTableData, row) {
     placedTilesTable.setCellMeta(row, 1, "source", function(query, process) {
@@ -151,7 +164,7 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
             });
         }
 
-        $("#calculate-submit").prop("disabled", !readyToCalculate());
+        $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
     },
     afterCreateRow: (index, amount) => {
         Array.from(new Array(amount).keys(), i => i + index).forEach(function(row) {
@@ -275,7 +288,7 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
             });
         }
 
-        $("#calculate-submit").prop("disabled", !readyToCalculate());
+        $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
     }
 });
 
@@ -289,9 +302,14 @@ $("#railroads-tab").on("shown.bs.tab", function(e) {
 });
 
 
-function readyToCalculate() {
+function readyToSelectRailroad() {
     return placedTilesTableReady() &&
         railroadsTableReady();
+}
+
+function readyToCalculate() {
+    return readyToSelectRailroad() &&
+        railroadSelected();
 }
 
 function placedTilesTableReady() {
@@ -305,6 +323,11 @@ function placedTilesTableReady() {
 function railroadsTableReady() {
     return railroadsTableData.length >= 2 &&
         railroadsTableData.every(row => isEmpty(row[5]) || !row[5].includes(chicago) || !isEmpty(row[6]));
+}
+
+function railroadSelected() {
+    var railroadNames = railroadsTableData.map(railroad => railroad[0]).filter(railroad => !isEmpty(railroad));
+    return railroadNames.includes($("#railroad-name").val());
 }
 
 {% endblock %}
