@@ -91,6 +91,10 @@ function addSources(placedTilesTable, placedTilesTableData, row) {
     });
 }
 
+function isEmpty(value) {
+    return value === '' || value === null || value === undefined;
+}
+
 var placedTilesTableData = [new Array({{ placed_tiles_colnames | length }}).fill(null)];
 var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-table"), {
     data: placedTilesTableData,
@@ -126,7 +130,7 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
                     placedTilesTableData[row][2] = null;
                     placedTilesTable.render();
 
-                    placedTilesTable.setCellMeta(row, 1, "editor", newValue === '' ? false : "dropdown");
+                    placedTilesTable.setCellMeta(row, 1, "editor", isEmpty(newValue) ? false : "dropdown");
                     placedTilesTable.setCellMeta(row, 2, "editor", false);
                 }
 
@@ -134,7 +138,7 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
                     placedTilesTableData[row][2] = null;
                     placedTilesTable.render();
 
-                    placedTilesTable.setCellMeta(row, 2, "editor", newValue === '' ? false : "dropdown");
+                    placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(newValue) ? false : "dropdown");
                 }
             });
         }
@@ -238,11 +242,11 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
             }
             changes.forEach(([row, col, oldValue, newValue]) => {
                 if (col === 0) {
-                    railroadsTable.setCellMeta(row, 1, "editor", newValue === '' ? false : "dropdown");
-                    railroadsTable.setCellMeta(row, 2, "editor", newValue === '' ? false : "dropdown");
-                    railroadsTable.setCellMeta(row, 3, "editor", newValue === '' ? false : "dropdown");
-                    railroadsTable.setCellMeta(row, 4, "editor", newValue === '' ? false : "dropdown");
-                    railroadsTable.setCellMeta(row, 5, "editor", newValue === '' ? false : "chosen");
+                    railroadsTable.setCellMeta(row, 1, "editor", isEmpty(newValue) ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 2, "editor", isEmpty(newValue) ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 3, "editor", isEmpty(newValue) ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 4, "editor", isEmpty(newValue) ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 5, "editor", isEmpty(newValue) ? false : "chosen");
                     if (newValue === '') {
                         railroadsTable.setCellMeta(row, 3, "editor", false);
                         railroadsTableData[row][1] = null;
@@ -285,14 +289,14 @@ function readyToCalculate() {
 function placedTilesTableReady() {
     return placedTilesTableData.length >= 2 &&
         placedTilesTableData.every((row) => {
-            return row.every(col => col !== null) ||
-                   row.every(col => col === null);
+            return row.every(col => !isEmpty(col)) ||
+                   row.every(col => isEmpty(col));
         });
 }
 
 function railroadsTableReady() {
     return railroadsTableData.length >= 2 &&
-        railroadsTableData.every(row => row[5] === null || !row[5].includes(chicago) || row[6] !== null);
+        railroadsTableData.every(row => isEmpty(row[5]) || !row[5].includes(chicago) || !isEmpty(row[6]));
 }
 
 {% endblock %}
