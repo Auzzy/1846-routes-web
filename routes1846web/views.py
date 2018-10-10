@@ -1,5 +1,6 @@
 import json
 import tempfile
+import traceback
 
 from flask import jsonify, render_template, request
 
@@ -76,6 +77,7 @@ def calculate():
             }
     except Exception as exc:
         routes_json["error"] = str(exc)
+        traceback.print_exc()
     return jsonify(routes_json)
 
 def _get_space(coord):
