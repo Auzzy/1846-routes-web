@@ -66,11 +66,17 @@ function calculate() {
         .done(function(resultJson) {
             if ("routes" in resultJson) {
                 $("#route-list").empty();
-                for (train in resultJson["routes"]) {
-                    var trainRoute = resultJson["routes"][train];
+                if (!Object.keys(resultJson["routes"]).length) {
                     $("<li />")
-                        .text(train + ": " + trainRoute["route"].join(", ") + " (" + trainRoute["value"] + ")")
+                        .text("No valid routes were found for the given configuration and railroad.")
                         .appendTo($("#route-list"));
+                } else {
+                    for (train in resultJson["routes"]) {
+                        var trainRoute = resultJson["routes"][train];
+                        $("<li />")
+                            .text(train + ": " + trainRoute["route"].join(", ") + " (" + trainRoute["value"] + ")")
+                            .appendTo($("#route-list"));
+                    }
                 }
             } else if ("error" in resultJson) {
                 $("#route-list").empty();
