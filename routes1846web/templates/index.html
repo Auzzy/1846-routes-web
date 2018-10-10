@@ -48,7 +48,7 @@
 
 {% block js %}
 function getTrains(row) {
-    var trainCells = row.slice(1, 5).filter(train => train !== null);
+    var trainCells = row.slice(1, 5).filter(train => !isEmpty(train));
     return trainCells.length > 0 ? trainCells.join(",") : null
 }
 
