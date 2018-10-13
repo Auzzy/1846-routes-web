@@ -100,22 +100,41 @@ $("#railroad-name").change(function() {
 });
 $("#reload-calculate").click(calculate);
 
-function addSources(placedTilesTable, placedTilesTableData, row) {
-    placedTilesTable.setCellMeta(row, 1, "source", function(query, process) {
-        var coord = placedTilesTableData[row][0];
+function tileIdSourceFromCoord(coord) {
+    return function (query, process) {
         $.get("{{ url_for('legal_tiles') }}", {coord: coord})
             .done(function(result) {
                 process(result["legal-tile-ids"]);
             });
-    });
-    placedTilesTable.setCellMeta(row, 2, "source", function(query, process) {
-        var coord = placedTilesTableData[row][0];
-        var tileId = placedTilesTableData[row][1];
+    }
+}
+
+function tileIdSource(row) {
+    return function(query, process) {
+        var source = tileIdSourceFromCoord(placedTilesTableData[row][0]);
+        source(query, process);
+    }
+}
+
+function orientationSourceFromCoord(coord, tileId) {
+    return function(query, process) {
         $.get("{{ url_for('legal_orientations') }}", {coord: coord, tileId: tileId})
             .done(function(result) {
                 process(result["legal-orientations"]);
             });
-    });
+    }
+}
+
+function orientationSource(row) {
+    return function(query, process) {
+        var source = orientationSourceFromCoord(placedTilesTableData[row][0], placedTilesTableData[row][1]);
+        source(query, process);
+    }
+}
+
+function addSources(placedTilesTable, placedTilesTableData, row) {
+    placedTilesTable.setCellMeta(row, 1, "source", tileIdSource(row));
+    placedTilesTable.setCellMeta(row, 2, "source", orientationSource(row));
 }
 
 function isEmpty(value) {
@@ -153,17 +172,21 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
         if (changes !== null) {
             changes.forEach(([row, col, oldValue, newValue]) => {
                 if (col === 0) {
-                    placedTilesTableData[row][1] = null;
-                    placedTilesTableData[row][2] = null;
-                    placedTilesTable.render();
+                    if (source !== "CopyPaste.paste") {
+                        placedTilesTableData[row][1] = null;
+                        placedTilesTableData[row][2] = null;
+                        placedTilesTable.render();
+                    }
 
                     placedTilesTable.setCellMeta(row, 1, "editor", isEmpty(newValue) ? false : "dropdown");
                     placedTilesTable.setCellMeta(row, 2, "editor", false);
                 }
 
                 if (col === 1) {
-                    placedTilesTableData[row][2] = null;
-                    placedTilesTable.render();
+                    if (source !== "CopyPaste.paste") {
+                        placedTilesTableData[row][2] = null;
+                        placedTilesTable.render();
+                    }
 
                     placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(newValue) ? false : "dropdown");
                 }
@@ -175,6 +198,51 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
     afterCreateRow: (index, amount) => {
         Array.from(new Array(amount).keys(), i => i + index).forEach(function(row) {
             addSources(placedTilesTable, placedTilesTableData, row);
+        });
+    },
+    beforePaste: function(data, pasteAreaArray) {
+        var pasteArea = pasteAreaArray[0];
+
+        var colNums = Array.from(new Array(data[0].length).keys(), i => i + pasteArea.startCol);
+
+        // Remove all whitespace
+        data.slice().forEach(function(row, index) {
+            data.splice(index, 1, row.map(col => col.trim()));
+        });
+
+        data.slice().forEach(function(rowData, dataIndex) {
+            var rowNum = dataIndex + pasteArea.startRow;
+            var coord = colNums.includes(0) ? rowData[colNums.indexOf(0)] : placedTilesTableData[rowNum][0];
+            var tileId = colNums.includes(1) ? parseInt(rowData[colNums.indexOf(1)], 10) : placedTilesTableData[rowNum][1];
+            var orientation = colNums.includes(2) ? parseInt(rowData[colNums.indexOf(2)], 10) : placedTilesTableData[rowNum][2];
+
+            if (colNums.includes(0)) {
+                var legalValues = placedTilesTable.getCellMeta(rowNum, 0).source;
+                if (!legalValues.includes(coord)) {
+                    data.splice(dataIndex, 1, new Array(placedTilesTableData[0].length).fill(null));
+                    return;
+                }
+            }
+            if (colNums.includes(1)) {
+                data[dataIndex][colNums.indexOf(1)] = tileId;
+
+                var sourceFunc = tileIdSourceFromCoord(coord);
+                sourceFunc("", function(legalValues) {
+                    if (!legalValues.includes(tileId)) {
+                        placedTilesTable.setDataAtCell(rowNum, 1, null, "edit");
+                    }
+                });
+            }
+            if (colNums.includes(2)) {
+                data[dataIndex][colNums.indexOf(2)] = orientation;
+
+                var sourceFunc = orientationSourceFromCoord(coord, tileId);
+                sourceFunc("", function(legalValues) {
+                    if (!legalValues.includes(orientation)) {
+                        placedTilesTable.setDataAtCell(rowNum, 2, null, "edit");
+                    }
+                });
+            }
         });
     }
 });
