@@ -343,6 +343,13 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
             addRailroadSources(row);
         });
     },
+    beforeChange: (changes) => {
+        changes.slice().forEach(([row, col, oldValue, newValue], index) => {
+            if (col === 5) {
+                changes[index][3] = newValue.split(",").map(val => val.trim()).join(",");
+            }
+        });
+    },
     afterChange: (changes) => {
         if (changes !== null) {
             if (changes.some(([row, col, oldValue, newValue]) => col === 0)) {
@@ -374,7 +381,7 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
                         railroadsTableData[row][2] = null;
                         railroadsTableData[row][3] = null;
                         railroadsTableData[row][4] = null;
-                        railroadsTableData[row][5] = null;
+                        railroadsTableData[row][5] = "";
                         railroadsTableData[row][6] = null;
                         railroadsTable.render();
                     }
@@ -389,6 +396,70 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
         }
 
         $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
+    },
+    beforePaste: function(data, pasteAreaArray) {
+        var pasteArea = pasteAreaArray[0];
+
+        var colNums = Array.from(new Array(data[0].length).keys(), i => i + pasteArea.startCol);
+
+        // Remove all whitespace
+        data.slice().forEach(function(row, index) {
+            data.splice(index, 1, row.map(col => col.trim()));
+        });
+
+        data.slice().forEach(function(rowData, dataIndex) {
+            var rowNum = dataIndex + pasteArea.startRow;
+            var name = colNums.includes(0) ? rowData[colNums.indexOf(0)] : railroadsTableData[rowNum][0];
+            var trains = {
+                1: colNums.includes(1) ? rowData[colNums.indexOf(1)] : railroadsTableData[rowNum][1],
+                2: colNums.includes(2) ? rowData[colNums.indexOf(2)] : railroadsTableData[rowNum][2],
+                3: colNums.includes(3) ? rowData[colNums.indexOf(3)] : railroadsTableData[rowNum][3],
+                4: colNums.includes(4) ? rowData[colNums.indexOf(4)] : railroadsTableData[rowNum][4]
+            };
+            var stationsStr = colNums.includes(5) ? rowData[colNums.indexOf(5)] : railroadsTableData[rowNum][5];
+            var stations = isEmpty(stationsStr) ? [] : stationsStr.split(",").map(station => station.trim());
+            var chicagoStationSide = colNums.includes(6) ? parseInt(rowData[colNums.indexOf(6)], 10) : railroadsTableData[rowNum][6];
+
+            if (colNums.includes(0)) {
+                var legalValues = railroadsTable.getCellMeta(rowNum, 0).source;
+                if (!legalValues.includes(name)) {
+                    data.splice(dataIndex, 1, new Array(railroadsTable[0].length).fill(null));
+                    return;
+                }
+            }
+
+            Object.keys(trains).map(train => parseInt(train, 10)).forEach(colNum => {
+                if (colNums.includes(colNum)) {
+                    var sourceFunc = trainSource(rowNum);
+                    sourceFunc("", function(legalValues) {
+                        if (!legalValues.includes(trains[colNum])) {
+                            railroadsTable.setDataAtCell(rowNum, colNum, null, "edit");
+                        }
+                    });
+                }
+            });
+
+            if (colNums.includes(5)) {
+                var sourceFunc = stationsSource(rowNum);
+                sourceFunc("", function(legalValues) {
+                    var legalStations = stations.filter(station => legalValues.includes(station));
+                    // if (isEmpty(stations) || !stations.every(station => legalValues.includes(station))) {
+                        railroadsTable.setDataAtCell(rowNum, 5, legalStations.join(","), "edit");
+                    // }
+                });
+            }
+
+            if (colNums.includes(6)) {
+                data[dataIndex][colNums.indexOf(6)] = chicagoStationSide;
+
+                var sourceFunc = chicagoStationSideSource(rowNum);
+                sourceFunc("", function(legalValues) {
+                    if (!legalValues.includes(chicagoStationSide)) {
+                        railroadsTable.setDataAtCell(rowNum, 6, null, "edit");
+                    }
+                });
+            }
+        });
     }
 });
 
