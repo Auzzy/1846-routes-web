@@ -132,7 +132,7 @@ function orientationSource(row) {
     }
 }
 
-function addSources(placedTilesTable, placedTilesTableData, row) {
+function addPlacedTileSources(row) {
     placedTilesTable.setCellMeta(row, 1, "source", tileIdSource(row));
     placedTilesTable.setCellMeta(row, 2, "source", orientationSource(row));
 }
@@ -197,7 +197,7 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
     },
     afterCreateRow: (index, amount) => {
         Array.from(new Array(amount).keys(), i => i + index).forEach(function(row) {
-            addSources(placedTilesTable, placedTilesTableData, row);
+            addPlacedTileSources(row);
         });
     },
     beforePaste: function(data, pasteAreaArray) {
@@ -248,7 +248,7 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
 });
 
 // Needed to add sources to the initial row, since it doesn't trigger afterCreateRow
-addSources(placedTilesTable, placedTilesTableData, 0);
+addPlacedTileSources(0);
 
 {% set railroads_column_headers = [] -%}
 {%- for colname in railroads_colnames -%}
@@ -258,6 +258,43 @@ addSources(placedTilesTable, placedTilesTableData, 0);
 {{- railroads_column_headers.append(colname) or "" -}}
 {%- endif -%}
 {%- endfor -%}
+
+function trainSource(row) {
+    return function(query, process) {
+        $.get("{{ url_for('trains') }}")
+            .done(function(result) {
+                process(result["trains"]);
+            });
+    }
+}
+
+function stationsSource(row) {
+    return function(query, process) {
+        $.get("{{ url_for('cities') }}")
+            .done(function(result) {
+                process(result["cities"]);
+            });
+    }
+}
+
+function chicagoStationSideSource(row) {
+    return function(query, process) {
+        placedChicagoStations = railroadsTableData.map(row => row[3]);
+        $.get("{{ url_for('chicago_stations') }}", {stations: JSON.stringify(placedChicagoStations)})
+            .done(function(result) {
+                process(result["chicago-stations"]);
+            });
+    }
+}
+
+function addRailroadSources(row) {
+    railroadsTable.setCellMeta(row, 1, "source", trainSource(row));
+    railroadsTable.setCellMeta(row, 2, "source", trainSource(row));
+    railroadsTable.setCellMeta(row, 3, "source", trainSource(row));
+    railroadsTable.setCellMeta(row, 4, "source", trainSource(row));
+    railroadsTable.getCellMeta(row, 5).chosenOptions.data = stationsSource(row);
+    railroadsTable.setCellMeta(row, 6, "source", chicagoStationSideSource(row));
+}
 
 var chicago = "D6";
 var railroadsTableData = [new Array({{ railroads_column_headers | length }}).fill(null)];
@@ -280,12 +317,7 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
             type: 'dropdown',
             allowInvalid: false,
             width: 60,
-            source: function(query, process) {
-                $.get("{{ url_for('trains') }}")
-                    .done(function(result) {
-                        process(result["trains"]);
-                    });
-            },
+            source: [],
             editor: false
         },
         {% endfor -%}
@@ -295,28 +327,22 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
             width: 180,
             chosenOptions: {
                 multiple: true,
-                data: function(query, process) {
-                    $.get("{{ url_for('cities') }}")
-                        .done(function(result) {
-                            process(result["cities"]);
-                        });
-                }
+                data: []
             },
             editor: false
         },
         {
             type: 'dropdown',
             allowInvalid: false,
-            source: function(query, process) {
-                placedChicagoStations = railroadsTableData.map(row => row[3]);
-                $.get("{{ url_for('chicago_stations') }}", {stations: JSON.stringify(placedChicagoStations)})
-                    .done(function(result) {
-                        process(result["chicago-stations"]);
-                    });
-            },
+            source: [],
             editor: false
         }
     ],
+    afterCreateRow: (index, amount) => {
+        Array.from(new Array(amount).keys(), i => i + index).forEach(function(row) {
+            addRailroadSources(row);
+        });
+    },
     afterChange: (changes) => {
         if (changes !== null) {
             if (changes.some(([row, col, oldValue, newValue]) => col === 0)) {
@@ -365,6 +391,9 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
         $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
     }
 });
+
+addRailroadSources(0);
+
 
 // Handsontable isn't properly displayed due to being hidden. Rendering once it's visible solves the problem.
 $("#placed-tiles-tab").on("shown.bs.tab", function(e) {
