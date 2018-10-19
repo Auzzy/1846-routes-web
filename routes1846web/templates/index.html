@@ -496,7 +496,11 @@ function placedTilesTableReady() {
 
 function railroadsTableReady() {
     return railroadsTableData.length >= 2 &&
-        railroadsTableData.every(row => isEmpty(row[5]) || !row[5].includes(chicago) || !isEmpty(row[6]));
+        railroadsTableData.every(row =>
+                row.every(column => isEmpty(column)) ||
+                    (getTrains(row) !== null &&
+                    !isEmpty(row[5]) &&
+                    (!row[5].includes(chicago) || !isEmpty(row[6]))));
 }
 
 function railroadSelected() {
