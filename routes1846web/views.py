@@ -14,7 +14,7 @@ LOG = logging.getLogger(__name__)
 
 
 CHICAGO_STATION_EDGES = {0, 3, 4, 5}
-RAILROAD_NAMES = [
+RAILROAD_NAMES = {
     "Baltimore & Ohio",
     "Illinois Central",
     "New York Central",
@@ -22,7 +22,7 @@ RAILROAD_NAMES = [
     "Erie",
     "Grand Trunk",
     "Pennsylvania"
-]
+}
 
 RAILROADS_COLUMN_MAP = {
     "name": "name",
@@ -53,8 +53,7 @@ def main():
     return render_template("index.html",
             railroads_colnames=RAILROADS_COLUMN_NAMES,
             placed_tiles_colnames=PLACED_TILES_COLUMN_NAMES,
-            tile_coords=tile_coords,
-            railroad_names=RAILROAD_NAMES)
+            tile_coords=tile_coords)
 
 @app.route("/calculate", methods=["POST"])
 def calculate():
@@ -158,6 +157,18 @@ def legal_orientations():
     LOG.info("Legal orientations response for {} at {} (query: {}): {}".format(tile_id, coord, query, legal_tile_ids))
 
     return jsonify({"legal-orientations": list(sorted(orientations))})
+
+@app.route("/railroads/legal-railroads")
+def railroads():
+    LOG.info("Legal railroads request.")
+
+    existing_railroads = {railroad for railroad in json.loads(request.args.get("railroads")) if railroad}
+
+    legal_railroads = RAILROAD_NAMES - existing_railroads
+
+    LOG.info("Legal railroads response: {}".format(legal_railroads))
+
+    return jsonify({"railroads": list(sorted(legal_railroads))})
 
 @app.route("/railroads/trains")
 def trains():

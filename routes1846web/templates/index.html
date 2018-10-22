@@ -50,6 +50,7 @@
                     same system as orientation.
                 </p>
                 <p>For example, the C & WI space is side 5.</p>
+            </div>
         </div>
     </div>
   </div>
@@ -291,6 +292,16 @@ addPlacedTileSources(0);
 {%- endif -%}
 {%- endfor -%}
 
+function railroadSource(row) {
+    return function(query, process) {
+        var railroadNames = railroadsTableData.map(row => row[0]);
+        $.get("{{ url_for('railroads') }}", {railroads: JSON.stringify(railroadNames)})
+            .done(function(result) {
+                process(result["railroads"]);
+            });
+    }
+}
+
 function trainSource(row) {
     return function(query, process) {
         $.get("{{ url_for('trains') }}")
@@ -311,7 +322,7 @@ function stationsSource(row) {
 
 function chicagoStationSideSource(row) {
     return function(query, process) {
-        placedChicagoStations = railroadsTableData.map(row => row[3]);
+        var placedChicagoStations = railroadsTableData.map(row => row[3]);
         $.get("{{ url_for('chicago_stations') }}", {stations: JSON.stringify(placedChicagoStations)})
             .done(function(result) {
                 process(result["chicago-stations"]);
@@ -320,6 +331,7 @@ function chicagoStationSideSource(row) {
 }
 
 function addRailroadSources(row) {
+    railroadsTable.setCellMeta(row, 0, "source", railroadSource(row));
     railroadsTable.setCellMeta(row, 1, "source", trainSource(row));
     railroadsTable.setCellMeta(row, 2, "source", trainSource(row));
     railroadsTable.setCellMeta(row, 3, "source", trainSource(row));
@@ -341,7 +353,7 @@ var railroadsTable = new Handsontable(document.getElementById("railroads-table")
         {
             type: 'dropdown',
             allowInvalid: false,
-            source: {{ railroad_names | tojson | safe }},
+            source: [],
             width: 170
         },
         {% for num in range(4) -%}
