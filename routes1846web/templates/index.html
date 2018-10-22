@@ -16,10 +16,42 @@
 
 <div class="tab-content" id="routes-tabs-content" style="margin-left: 50px; margin-top: 30px;">
   <div class="tab-pane fade show active" id="placed-tiles" role="tabpanel" aria-labelledby="placed-tiles-tab">
-    <div id="placed-tiles-table"></div>
+    <div style="float: left;" id="placed-tiles-table"></div>
+    <div style="float: left; width: 50px;">&nbsp;</div>
+    <div style="float: left;">
+        <div>
+            <span style="float: left; font-weight: bold;">coordinate -&nbsp;</span>
+            <p style="float: left; width: 400px;">
+                If your board doesn't have coordinates, refer to
+                <a href="https://s3-us-west-2.amazonaws.com/gmtwebsiteassets/1846/1846_Map-FINAL72.jpg" target="_blank">one that does</a>.
+            </p>
+        </div>
+        <div>
+            <span style="float: left; font-weight: bold;">tile number -&nbsp;</span> <p style="float: left; width: 400px;">The ID number on the tile.</p>
+        </div>
+        <div>
+            <span style="float: left; font-weight: bold;">orientation -&nbsp;</span>
+            <div style="float: left; width: 400px;">
+                <p>Number of counter-clockwise rotations to put the tile ID due south.</p>
+                <p>For example, placing tile 8 at E13 in orientation 3 connects Toldeo and Fort Wayne.</p>
+            </div>
+        </div>
+    </div>
   </div>
   <div class="tab-pane fade" id="railroads" role="tabpanel" aria-labelledby="railroads-tab">
-    <div id="railroads-table"></div>
+    <div style="float: left;" id="railroads-table"></div>
+    <div style="float: left; width: 50px;">&nbsp;</div>
+    <div style="float: left;">
+        <div>
+            <span style="float: left; font-weight: bold;">chicago station side -&nbsp;</span>
+            <div style="float: left; width: 400px;">
+                <p>
+                    Railroads with a station in Chicago (D6) indicate which "side" of the tile it's on, using the
+                    same system as orientation.
+                </p>
+                <p>For example, the C & WI space is side 5.</p>
+        </div>
+    </div>
   </div>
 </div>
 
