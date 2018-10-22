@@ -1,4 +1,5 @@
 import json
+import logging
 import tempfile
 import traceback
 
@@ -8,6 +9,8 @@ from routes1846 import boardstate, find_best_routes, railroads, tiles
 from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell
 
 from routes1846web.routes1846web import app
+
+LOG = logging.getLogger(__name__)
 
 
 CHICAGO_STATION_EDGES = {1, 4, 5, 6}
@@ -59,6 +62,11 @@ def calculate():
     board_state_rows = json.loads(request.form.get("board-state-json"))
     railroad_name = request.form["railroad-name"]
 
+    LOG.info("Calculate request.")
+    LOG.info("Target railroad: {}".format(railroad_name))
+    LOG.info("Railroad input: {}".format(railroads_state_rows))
+    LOG.info("Board input: {}".format(board_state_rows))
+
     routes_json = {}
     try:
         board = boardstate.load([dict(zip(boardstate.FIELDNAMES, row)) for row in board_state_rows if any(val for val in row)])
@@ -78,6 +86,9 @@ def calculate():
     except Exception as exc:
         routes_json["error"] = str(exc)
         traceback.print_exc()
+
+    LOG.info("Calculate response: {}".format(routes_json))
+
     return jsonify(routes_json)
 
 def _get_space(coord):
@@ -108,6 +119,8 @@ def legal_tiles():
     query = request.args.get("query")
     coord = request.args.get("coord")
 
+    LOG.info("Legal tiles request for {} (query: {}).".format(coord, query))
+
     space = _get_space(coord)
 
     from routes1846 import tiles
@@ -128,6 +141,8 @@ def legal_tiles():
     if query:
         legal_tile_ids = [tile_id for tile_id in legal_tile_ids if str(tile_id).startswith(query)]
 
+    LOG.info("Legal tiles response for {} (query: {}): {}".format(coord, query, legal_tile_ids))
+
     return jsonify({"legal-tile-ids": legal_tile_ids})
 
 @app.route("/board/legal-orientations")
@@ -136,17 +151,29 @@ def legal_orientations():
     coord = request.args.get("coord")
     tile_id = request.args.get("tileId")
 
+    LOG.info("Legal orientations request for {} at {} (query: {}).".format(tile_id, coord, query))
+
     orientations = _get_orientations(coord, tile_id)
+
+    LOG.info("Legal orientations response for {} at {} (query: {}): {}".format(tile_id, coord, query, legal_tile_ids))
+
     return jsonify({"legal-orientations": list(sorted(orientations))})
 
 @app.route("/railroads/trains")
 def trains():
+    LOG.info("Train request.")
+
     trains = [str(railroads.Train(collect, visit, None)) for collect, visit in sorted(railroads.TRAIN_TO_PHASE)]
+
+    LOG.info("Train response: {}".format(trains))
+
     return jsonify({"trains": trains})
 
 @app.route("/railroads/cities")
 def cities():
     query = request.args.get("query")
+
+    LOG.info("City request (query: {}).".format(query))
 
     from routes1846 import boardtile
     cities = [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.is_city and not tile.is_terminal_city]
@@ -154,11 +181,18 @@ def cities():
     if query:
         cities = [city for city in cities if city.startswith(query)]
 
+    LOG.info("City response (query: {}): {}".format(query, cities))
+
     return jsonify({"cities": cities})
 
 @app.route("/railroads/legal-chicago-stations")
 def chicago_stations():
+    LOG.info("Legal Chicago stations request.")
+
     existing_station_edges = {edge for edge in json.loads(request.args.get("stations")) if edge}
 
     legal_stations = CHICAGO_STATION_EDGES - existing_station_edges
+
+    LOG.info("Legal Chicago stations response: {}".format(legal_stations))
+
     return jsonify({"chicago-stations": list(legal_stations)})
