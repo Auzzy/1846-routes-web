@@ -13,7 +13,7 @@ from routes1846web.routes1846web import app
 LOG = logging.getLogger(__name__)
 
 
-CHICAGO_STATION_EDGES = {1, 4, 5, 6}
+CHICAGO_STATION_EDGES = {0, 3, 4, 5}
 RAILROAD_NAMES = [
     "Baltimore & Ohio",
     "Illinois Central",
@@ -105,7 +105,7 @@ def _get_orientations(coord, tile_id):
     
     from routes1846.placedtile import PlacedTile
     orientations = []
-    for orientation in range(1, 7):
+    for orientation in range(0, 6):
         try:
             paths = PlacedTile.get_paths(cell, tile, orientation)
             orientations.append(orientation)
