@@ -154,7 +154,7 @@ def legal_orientations():
 
     orientations = _get_orientations(coord, tile_id)
 
-    LOG.info("Legal orientations response for {} at {} (query: {}): {}".format(tile_id, coord, query, legal_tile_ids))
+    LOG.info("Legal orientations response for {} at {} (query: {}): {}".format(tile_id, coord, query, orientations))
 
     return jsonify({"legal-orientations": list(sorted(orientations))})
 
