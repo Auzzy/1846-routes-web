@@ -113,6 +113,11 @@ def _get_orientations(coord, tile_id):
 
     return orientations
 
+@app.route("/board/tile-image")
+def board_tile_image():
+    tile_id = request.args.get("tileId")
+    return url_for('static', filename='images/{:03}'.format(int(tile_id)))
+
 @app.route("/board/legal-tiles")
 def legal_tiles():
     query = request.args.get("query")
