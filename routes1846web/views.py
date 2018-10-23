@@ -159,7 +159,7 @@ def legal_orientations():
     return jsonify({"legal-orientations": list(sorted(orientations))})
 
 @app.route("/railroads/legal-railroads")
-def railroads():
+def legal_railroads():
     LOG.info("Legal railroads request.")
 
     existing_railroads = {railroad for railroad in json.loads(request.args.get("railroads")) if railroad}

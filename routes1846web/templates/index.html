@@ -295,7 +295,7 @@ addPlacedTileSources(0);
 function railroadSource(row) {
     return function(query, process) {
         var railroadNames = railroadsTableData.map(row => row[0]);
-        $.get("{{ url_for('railroads') }}", {railroads: JSON.stringify(railroadNames)})
+        $.get("{{ url_for('legal_railroads') }}", {railroads: JSON.stringify(railroadNames)})
             .done(function(result) {
                 process(result["railroads"]);
             });
