@@ -174,55 +174,8 @@ function isEmpty(value) {
     return value === '' || value === null || value === undefined;
 }
 
-function customDropdownRenderer(instance, td, row, col, prop, value, cellProperties) {
-    Handsontable.renderers.DropdownRenderer.apply(this, arguments);
-
-    if (value !== null) {
-        td.removeChild(td.childNodes[1]);
-
-        img = document.createElement('img');
-        img.style.cssText = "width: 40px; height: 40 px;";
-        img.src = "{{ url_for('static', filename="images") }}/" + value.toString().padStart(3, "0") + ".gif";
-
-        td.appendChild(img);
-    }
-
-    return td;
-}
-
-var TileEditor = Handsontable.editors.DropdownEditor.prototype.extend();
-
-TileEditor.prototype.updateChoicesList = function(choicesList) {
-    var self = this;
-
-    self.tileIdByIndex = {};
-
-    choicesList.slice().forEach((tileId, index) => {
-        // Do some basic input sanitation
-        tileId = parseInt(tileId, 10).toString();
-
-        choicesList.splice(choicesList.indexOf(tileId), 1);
-
-        img = document.createElement('img');
-        img.style.cssText = "width: 40px; height: 40 px;";
-        img.src = "{{ url_for('static', filename="images") }}/" + tileId.padStart(3, "0") + ".gif";
-
-        choicesList.push(img.outerHTML);
-        self.tileIdByIndex[index] = tileId;
-    });
-
-    Handsontable.editors.DropdownEditor.prototype.updateChoicesList.apply(self, arguments);
-}
-
-// TODO: Determine the right way to handle index == -1
-TileEditor.prototype.setValue = function(newVal) {
-    var index = this.strippedChoices.indexOf(newVal);
-    if (index !== -1) {
-        Handsontable.editors.DropdownEditor.prototype.setValue.apply(this, [parseInt(this.tileIdByIndex[index], 10).toString()]);
-    } else {
-        Handsontable.editors.DropdownEditor.prototype.setValue.apply(this, arguments);
-    }
-}
+var TileEditor = createTileEditor("{{ url_for('static', filename='images') }}");
+var OrientationEditor = createOrientationEditor("{{ url_for('static', filename='images') }}");
 
 var placedTilesTableData = [new Array({{ placed_tiles_colnames | length }}).fill(null)];
 var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-table"), {
@@ -243,14 +196,16 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
             allowInvalid: false,
             source: [],
             editor: false,
-            renderer: customDropdownRenderer,
+            renderer: customTileDropdownRenderer("{{ url_for('static', filename='images') }}"),
             allowHtml: true
         },
         {
             type: 'dropdown',
             allowInvalid: false,
             source: [],
-            editor: false
+            editor: false,
+            renderer: customOrientationDropdownRenderer("{{ url_for('static', filename='images') }}"),
+            allowHtml: true
         }
     ],
     afterChange: (changes, source) => {
@@ -263,7 +218,6 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
                         placedTilesTable.render();
                     }
 
-                    // placedTilesTable.setCellMeta(row, 1, "editor", isEmpty(newValue) ? false : "dropdown");
                     placedTilesTable.setCellMeta(row, 1, "editor", isEmpty(newValue) ? false : TileEditor);
                     placedTilesTable.setCellMeta(row, 2, "editor", false);
                 }
@@ -274,7 +228,7 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
                         placedTilesTable.render();
                     }
 
-                    placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(newValue) ? false : "dropdown");
+                    placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(newValue) ? false : OrientationEditor);
                 }
             });
         }

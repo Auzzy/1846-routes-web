@@ -33,7 +33,7 @@ RAILROADS_COLUMN_MAP = {
 
 PLACED_TILES_COLUMN_MAP = {
     "coord": "coordinate",
-    "tile_id": "tile number",
+    "tile_id": "tile",
     "orientation": "orientation"
 }
 
