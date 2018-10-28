@@ -1,3 +1,4 @@
+import collections
 import json
 import logging
 import tempfile
@@ -13,7 +14,8 @@ from routes1846web.routes1846web import app
 LOG = logging.getLogger(__name__)
 
 
-CHICAGO_STATION_EDGES = {0, 3, 4, 5}
+CHICAGO_STATION_SIDES = (0, 3, 4, 5)
+CHICAGO_STATION_COORDS = collections.OrderedDict([(str(CHICAGO_CELL.neighbors[side]), side) for side in CHICAGO_STATION_SIDES])
 RAILROAD_NAMES = {
     "Baltimore & Ohio",
     "Illinois Central",
@@ -65,6 +67,10 @@ def calculate():
     LOG.info("Target railroad: {}".format(railroad_name))
     LOG.info("Railroad input: {}".format(railroads_state_rows))
     LOG.info("Board input: {}".format(board_state_rows))
+
+    for row in railroads_state_rows:
+        if row[3]:
+            row[3] = CHICAGO_STATION_COORDS[row[3]]
 
     routes_json = {}
     try:
@@ -205,10 +211,10 @@ def cities():
 def chicago_stations():
     LOG.info("Legal Chicago stations request.")
 
-    existing_station_edges = {edge for edge in json.loads(request.args.get("stations")) if edge}
+    existing_station_coords = {coord for coord in json.loads(request.args.get("stations")) if coord}
 
-    legal_stations = CHICAGO_STATION_EDGES - existing_station_edges
+    legal_stations = list(sorted(set(CHICAGO_STATION_COORDS.keys()) - existing_station_coords))
 
     LOG.info("Legal Chicago stations response: {}".format(legal_stations))
 
-    return jsonify({"chicago-stations": list(legal_stations)})
+    return jsonify({"chicago-stations": legal_stations})
