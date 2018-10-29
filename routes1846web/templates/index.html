@@ -61,6 +61,11 @@
 {% endblock %}
 
 {% block js %}
+$("#routeModal").on("show.bs.modal", function () {
+    $("#route-list").empty();
+    $("#railroad-name")[0].selectedIndex = -1;
+})
+
 function getTrains(row) {
     var trainCells = row.slice(1, 5).filter(train => !isEmpty(train));
     return trainCells.length > 0 ? trainCells.join(",") : null
