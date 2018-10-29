@@ -1,4 +1,4 @@
-git+https://github.com/Auzzy/1846-routes.git#egg=1846-routes
+routes-1846 == 0.1
 
 Flask == 1.0.2
 Flask-WTF==0.14.2
