@@ -1,13 +1,16 @@
+function isEmpty(value) {
+    return value === '' || value === null || value === undefined;
+}
+
 function customTileDropdownRenderer(imagesBaseUrl) {
     return function(instance, td, row, col, prop, value, cellProperties) {
         Handsontable.renderers.DropdownRenderer.apply(this, arguments);
     
-        if (value !== null) {
+        if (!isEmpty(value)) {
             td.removeChild(td.childNodes[1]);
     
             img = document.createElement('img');
             img.style.cssText = "width: 40px; height: 40 px;";
-            // {# img.src = "{{ url_for('static', filename="images") }}/" + value.toString().padStart(3, "0") + ".png"; #}
 
             let tileIdStr = value.toString().padStart(3, "0");
             img.src = `${imagesBaseUrl}/${tileIdStr}.png`;
@@ -22,11 +25,11 @@ function customTileDropdownRenderer(imagesBaseUrl) {
 function customOrientationDropdownRenderer(imagesBaseUrl) {
     return function(instance, td, row, col, prop, value, cellProperties) {
         Handsontable.renderers.DropdownRenderer.apply(this, arguments);
-    
-        if (value !== null) {
-            td.removeChild(td.childNodes[1]);
 
-            var tileId = instance.getDataAtCell(row, 1);
+        var tileId = instance.getDataAtCell(row, 1);
+
+        if (!isEmpty(value) && !isEmpty(tileId)) {
+            td.removeChild(td.childNodes[1]);
 
             img = document.createElement('img');
             img.style.cssText = "width: 40px; height: 40 px;";
