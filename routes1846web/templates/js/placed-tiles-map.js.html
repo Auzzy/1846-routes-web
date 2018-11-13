@@ -1,7 +1,7 @@
 var legalCoords = {{ tile_coords | safe }};
 
-var mapImage = $("#map").get(0);
-$("#map-canvas")
+var mapImage = $("#placed-tiles-board").get(0);
+$("#placed-tiles-board-canvas")
     .css("position", "absolute")
     .css("left", mapImage.offsetLeft)
     .css("top", mapImage.offsetTop)
@@ -9,8 +9,8 @@ $("#map-canvas")
     .prop("height", mapImage.height);
 
 function drawTileOnMap(coord, tileId, orientation) {
-    var mapImg = $("#map").get(0);
-    var mapCanvas = $("#map-canvas").get(0);
+    var mapImg = $("#placed-tiles-board").get(0);
+    var mapCanvas = $("#placed-tiles-board-canvas").get(0);
 
     var rowAndCol = coordToRowAndCol(coord);
     var tileOrigin = getTileTopLeft(mapCanvas, rowAndCol.row, rowAndCol.col);
@@ -175,7 +175,7 @@ function populateModal(coord) {
         });
 }
 
-$("#map-canvas").click(function(event) {
+$("#placed-tiles-board-canvas").click(function(event) {
     var posXOnImg = event.pageX - $(this).offset().left;
     var posYOnImg = event.pageY - $(this).offset().top;
 

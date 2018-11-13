@@ -3,70 +3,105 @@
 {% block body %}
 <h2>1846 Route Calculator</h2>
 <ul class="nav nav-tabs" id="routes-tabs" role="tablist">
-  <li class="nav-item">
-    <a class="nav-link active" id="placed-tiles-tab" data-toggle="tab" href="#placed-tiles" role="tab" aria-controls="placed-tiles" aria-selected="true">Placed Tiles</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" id="railroads-tab" data-toggle="tab" href="#railroads" role="tab" aria-controls="railroads" aria-selected="false">Railroads</a>
-  </li>
-  <li>
-    <button id="calculate-submit" class="btn btn-success" data-toggle="modal" data-target="#routeModal" style="margin-left:10px;">Calculate</button>
-  </li>
+    <li class="nav-item">
+        <a class="nav-link active" id="placed-tiles-map-tab" data-toggle="tab" href="#placed-tiles-map-content" role="tab" aria-controls="placed-tiles-map" aria-selected="true">Place Tiles</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="placed-tiles-tab" data-toggle="tab" href="#placed-tiles-table-content" role="tab" aria-controls="placed-tiles-table" aria-selected="true">Tile Table</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="railroads-tab" data-toggle="tab" href="#railroads-content" role="tab" aria-controls="railroads" aria-selected="false">Railroads</a>
+    </li>
+    <li>
+        <button id="calculate-submit" class="btn btn-success" data-toggle="modal" data-target="#routeModal" style="margin-left:10px;">Calculate</button>
+    </li>
 </ul>
 
 <div class="tab-content" id="routes-tabs-content" style="margin-left: 50px; margin-top: 30px;">
-  <div class="tab-pane fade show active" id="placed-tiles" role="tabpanel" aria-labelledby="placed-tiles-tab">
-    <div style="float: left;" id="placed-tiles-table"></div>
-    <div style="float: left; width: 50px;">&nbsp;</div>
-  </div>
-  <div class="tab-pane fade" id="railroads" role="tabpanel" aria-labelledby="railroads-tab">
-    <div style="float: left;" id="railroads-table"></div>
-    <div style="float: left; width: 50px;">&nbsp;</div>
-    <div style="float: left;">
-        <div>
-            <span style="float: left; font-weight: bold;">chicago station side -&nbsp;</span>
-            <div style="float: left; width: 400px;">
-                <p>
-                    Railroads with a station in Chicago (D6) indicate the coordinate they exit through.
-                </p>
-                <p>
-                    For example, the C & WI space is side E7.
-                </p>
+    <div class="tab-pane fade show active" id="placed-tiles-map-content" role="tabpanel" aria-labelledby="placed-tiles-map-tab">
+        <img id="placed-tiles-board" src="{{ url_for('static', filename='images/1846-Map.png') }}" />
+        <canvas id="placed-tiles-board-canvas"></canvas>
+
+        <div class="modal fade" id="tile-selector" tabindex="-1" role="dialog" aria-labelledby="tileSelectorLabel" aria-hidden="true">
+            <div class="modal-dialog modal-sm" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="tileSelectorLabel"></h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" style="height: 70%; overflow-y: auto;">
+                        <div style="float: left;">
+                            <div id="tile-options" style=""></div>
+                        </div>
+                        <div style="float: left; margin-left: 50px;">
+                            <div id="tile-orientations"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-link" data-dismiss="modal" aria-label="Close">Cancel</button>
+                        <button id="place-tile-button" type="button" class="btn btn-primary">Place</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-  </div>
+    <div class="tab-pane fade" id="placed-tiles-table-content" role="tabpanel" aria-labelledby="placed-tiles-table-content">
+        <div style="float: left;" id="placed-tiles-table"></div>
+        <div style="float: left; width: 50px;">&nbsp;</div>
+    </div>
+    <div class="tab-pane fade" id="railroads-content" role="tabpanel" aria-labelledby="railroads-tab">
+        <div style="float: left;" id="railroads-table"></div>
+        <div style="float: left; width: 50px;">&nbsp;</div>
+        <div style="float: left;">
+            <div>
+                <span style="float: left; font-weight: bold;">chicago station side -&nbsp;</span>
+                <div style="float: left; width: 400px;">
+                    <p>
+                        Railroads with a station in Chicago (D6) indicate the coordinate they exit through.
+                    </p>
+                    <p>
+                        For example, the C & WI space is side E7.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="routeModal" tabindex="-1" role="dialog" aria-labelledby="routeModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div class="form-group">
-          <div>Best routes for</div> <select id="railroad-name" class="custom-select" style="width: 190px;"></select>
-          <span id="reload-calculate" class="oi oi-reload" title="reload" aria-hidden="true" style="display: none;"></span>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="form-group">
+                    <div>Best routes for</div> <select id="railroad-name" class="custom-select" style="width: 190px;"></select>
+                    <span id="reload-calculate" class="oi oi-reload" title="reload" aria-hidden="true" style="display: none;"></span>
+                </div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul id="route-list"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
         </div>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <ul id="route-list"></ul>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-      </div>
     </div>
-  </div>
 </div>
 {% endblock %}
 
 {% block js %}
+
+{% include "js/placed-tiles-map.js.html" %}
 
 {% include "js/placed-tiles-table.js.html" %}
 
 {% include "js/railroads-table.js.html" %}
 
 {% include "js/calculate.js.html" %}
+
 
 {% endblock %}
