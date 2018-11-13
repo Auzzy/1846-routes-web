@@ -1,0 +1,230 @@
+function railroadSource(row) {
+    return function(query, process) {
+        var railroadNames = railroadsTableData.map(row => row[0]);
+        $.get("{{ url_for('legal_railroads') }}", {railroads: JSON.stringify(railroadNames)})
+            .done(function(result) {
+                process(result["railroads"]);
+            });
+    }
+}
+
+function trainSource(row) {
+    return function(query, process) {
+        $.get("{{ url_for('trains') }}")
+            .done(function(result) {
+                process(result["trains"]);
+            });
+    }
+}
+
+function stationsSource(row) {
+    return function(query, process) {
+        $.get("{{ url_for('cities') }}")
+            .done(function(result) {
+                process(result["cities"]);
+            });
+    }
+}
+
+function chicagoStationSideSource(row) {
+    return function(query, process) {
+        var placedChicagoStations = railroadsTableData.map(row => row[3]);
+        $.get("{{ url_for('chicago_stations') }}", {stations: JSON.stringify(placedChicagoStations)})
+            .done(function(result) {
+                process(result["chicago-stations"]);
+            });
+    }
+}
+
+function addRailroadSources(row) {
+    railroadsTable.setCellMeta(row, 0, "source", railroadSource(row));
+    railroadsTable.setCellMeta(row, 1, "source", trainSource(row));
+    railroadsTable.setCellMeta(row, 2, "source", trainSource(row));
+    railroadsTable.setCellMeta(row, 3, "source", trainSource(row));
+    railroadsTable.setCellMeta(row, 4, "source", trainSource(row));
+    railroadsTable.getCellMeta(row, 5).chosenOptions.data = stationsSource(row);
+    railroadsTable.setCellMeta(row, 6, "source", chicagoStationSideSource(row));
+}
+
+{% set railroads_column_headers = [] -%}
+{%- for colname in railroads_colnames -%}
+{%- if colname == "trains" -%}
+{{- railroads_column_headers.extend(["train1", "train2", "train3", "train4"]) or "" -}}
+{%- else -%}
+{{- railroads_column_headers.append(colname) or "" -}}
+{%- endif -%}
+{%- endfor -%}
+
+var chicago = "D6";
+var railroadsTableData = [new Array({{ railroads_column_headers | length }}).fill(null)];
+var railroadsTable = new Handsontable(document.getElementById("railroads-table"), {
+    data: railroadsTableData,
+    rowHeaders: false,
+    colHeaders: {{ railroads_column_headers | tojson | safe }},
+    startRows: 1,
+    minSpareRows: 1,
+    enterMoves: {row: 0, col: 1},
+    columns: [
+        {
+            type: 'dropdown',
+            allowInvalid: false,
+            source: [],
+            width: 170
+        },
+        {% for num in range(4) -%}
+        {
+            type: 'dropdown',
+            allowInvalid: false,
+            width: 60,
+            source: [],
+            editor: false
+        },
+        {% endfor -%}
+        {
+            type: "dropdown",
+            allowInvalid: false,
+            width: 180,
+            chosenOptions: {
+                multiple: true,
+                data: []
+            },
+            editor: false
+        },
+        {
+            type: 'dropdown',
+            allowInvalid: false,
+            source: [],
+            editor: false
+        }
+    ],
+    afterCreateRow: (index, amount) => {
+        Array.from(new Array(amount).keys(), i => i + index).forEach(function(row) {
+            addRailroadSources(row);
+        });
+    },
+    beforeChange: (changes) => {
+        changes.slice().forEach(([row, col, oldValue, newValue], index) => {
+            if (col === 5) {
+                changes[index][3] = newValue.split(",").map(val => val.trim()).join(",");
+            }
+        });
+    },
+    afterChange: (changes) => {
+        if (changes !== null) {
+            if (changes.some(([row, col, oldValue, newValue]) => col === 0)) {
+                var selectedRailroad = $("#railroad-name option:selected").val();
+                var railroadNames = railroadsTableData.map(row => row[0]).filter(name => name);
+    
+                railroadNames = railroadNames.filter((name, index) => railroadNames.indexOf(name) >= index);
+                railroadNames.sort();
+    
+                $("#railroad-name").empty();
+                for (index in railroadNames) {
+                    $("#railroad-name").append(
+                        $("<option></option>")
+                            .attr("name", railroadNames[index])
+                            .text(railroadNames[index]));
+                }
+                $("#railroad-name").val(selectedRailroad);
+            }
+            changes.forEach(([row, col, oldValue, newValue]) => {
+                if (col === 0) {
+                    railroadsTable.setCellMeta(row, 1, "editor", isEmpty(newValue) ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 2, "editor", isEmpty(newValue) ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 3, "editor", isEmpty(newValue) ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 4, "editor", isEmpty(newValue) ? false : "dropdown");
+                    railroadsTable.setCellMeta(row, 5, "editor", isEmpty(newValue) ? false : "chosen");
+                    if (newValue === '') {
+                        railroadsTable.setCellMeta(row, 3, "editor", false);
+                        railroadsTableData[row][1] = null;
+                        railroadsTableData[row][2] = null;
+                        railroadsTableData[row][3] = null;
+                        railroadsTableData[row][4] = null;
+                        railroadsTableData[row][5] = "";
+                        railroadsTableData[row][6] = null;
+                        railroadsTable.render();
+                    }
+                } else if (col === 5) {
+                    railroadsTable.setCellMeta(row, 6, "editor", newValue.split(",").includes(chicago) ? "dropdown" : false);
+                    if (newValue !== chicago) {
+                        railroadsTableData[row][6] = null;
+                        railroadsTable.render();
+                    }
+                }
+            });
+        }
+
+        $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
+    },
+    beforePaste: function(data, pasteAreaArray) {
+        var pasteArea = pasteAreaArray[0];
+
+        var colNums = Array.from(new Array(data[0].length).keys(), i => i + pasteArea.startCol);
+
+        // Remove all whitespace
+        data.slice().forEach(function(row, index) {
+            data.splice(index, 1, row.map(col => col.trim()));
+        });
+
+        data.slice().forEach(function(rowData, dataIndex) {
+            var rowNum = dataIndex + pasteArea.startRow;
+            var name = colNums.includes(0) ? rowData[colNums.indexOf(0)] : railroadsTableData[rowNum][0];
+            var trains = {
+                1: colNums.includes(1) ? rowData[colNums.indexOf(1)] : railroadsTableData[rowNum][1],
+                2: colNums.includes(2) ? rowData[colNums.indexOf(2)] : railroadsTableData[rowNum][2],
+                3: colNums.includes(3) ? rowData[colNums.indexOf(3)] : railroadsTableData[rowNum][3],
+                4: colNums.includes(4) ? rowData[colNums.indexOf(4)] : railroadsTableData[rowNum][4]
+            };
+            var stationsStr = colNums.includes(5) ? rowData[colNums.indexOf(5)] : railroadsTableData[rowNum][5];
+            var stations = isEmpty(stationsStr) ? [] : stationsStr.split(",").map(station => station.trim());
+            var chicagoStationSide = colNums.includes(6) ? parseInt(rowData[colNums.indexOf(6)], 10) : railroadsTableData[rowNum][6];
+
+            if (colNums.includes(0)) {
+                var legalValues = railroadsTable.getCellMeta(rowNum, 0).source;
+                if (!legalValues.includes(name)) {
+                    data.splice(dataIndex, 1, new Array(railroadsTable[0].length).fill(null));
+                    return;
+                }
+            }
+
+            Object.keys(trains).map(train => parseInt(train, 10)).forEach(colNum => {
+                if (colNums.includes(colNum)) {
+                    var sourceFunc = trainSource(rowNum);
+                    sourceFunc("", function(legalValues) {
+                        if (!legalValues.includes(trains[colNum])) {
+                            railroadsTable.setDataAtCell(rowNum, colNum, null, "edit");
+                        }
+                    });
+                }
+            });
+
+            if (colNums.includes(5)) {
+                var sourceFunc = stationsSource(rowNum);
+                sourceFunc("", function(legalValues) {
+                    var legalStations = stations.filter(station => legalValues.includes(station));
+                    // if (isEmpty(stations) || !stations.every(station => legalValues.includes(station))) {
+                        railroadsTable.setDataAtCell(rowNum, 5, legalStations.join(","), "edit");
+                    // }
+                });
+            }
+
+            if (colNums.includes(6)) {
+                data[dataIndex][colNums.indexOf(6)] = chicagoStationSide;
+
+                var sourceFunc = chicagoStationSideSource(rowNum);
+                sourceFunc("", function(legalValues) {
+                    if (!legalValues.includes(chicagoStationSide)) {
+                        railroadsTable.setDataAtCell(rowNum, 6, null, "edit");
+                    }
+                });
+            }
+        });
+    }
+});
+
+addRailroadSources(0);
+
+// Handsontable isn't properly displayed due to being hidden. Rendering once it's visible solves the problem.
+$("#railroads-tab").on("shown.bs.tab", function(e) {
+    railroadsTable.render();
+});

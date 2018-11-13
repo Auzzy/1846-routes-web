@@ -1,0 +1,190 @@
+var legalCoords = {{ tile_coords | safe }};
+
+var mapImage = $("#map").get(0);
+$("#map-canvas")
+    .css("position", "absolute")
+    .css("left", mapImage.offsetLeft)
+    .css("top", mapImage.offsetTop)
+    .prop("width", mapImage.width)
+    .prop("height", mapImage.height);
+
+function drawTileOnMap(coord, tileId, orientation) {
+    var mapImg = $("#map").get(0);
+    var mapCanvas = $("#map-canvas").get(0);
+
+    var rowAndCol = coordToRowAndCol(coord);
+    var tileOrigin = getTileTopLeft(mapCanvas, rowAndCol.row, rowAndCol.col);
+
+    var orientationStr = orientation.toString();
+    var tileIdStr = tileId.toString().padStart(3, "0");
+    var imgSrc = `{{ url_for('static', filename='images') }}/${tileIdStr}-${orientationStr}.png`;
+    
+    var tileImage = new Image();
+    tileImage.src = imgSrc;
+
+    var context = mapCanvas.getContext('2d');
+    context.drawImage(tileImage, tileOrigin.x, tileOrigin.y, mapImg.width * 0.088, mapImg.height * 0.121);
+}
+
+function rowAndColToCoord(rowAndCol) {
+    // We add 1 since the first row with valid placements is B.
+    var rowStr = String.fromCharCode(rowAndCol.row + 1 + 65);
+    // We add 1 to align it with the column numbers, and another since the first column with valid placements is 2.
+    var colStr = (rowAndCol.col + 1 + 1).toString();
+    return `${rowStr}${colStr}`;
+}
+
+function coordToRowAndCol(coord) {
+    return {
+        // We remove 1 since we treat the first row as 0 for purposes of calcaulation (even though it's B).
+        row: coord.charCodeAt(0) - 65 - 1,
+        col: parseInt(coord.substring(1), 10) - 2
+    };
+}
+
+function getHexPoints(origin, img) {
+    return [
+        {x: origin.x, y: origin.y + img.height * 0.029},
+        {x: origin.x + img.width * 0.044, y: origin.y},
+        {x: origin.x + img.width * 0.088, y: origin.y + img.height * 0.029},
+        {x: origin.x + img.width * 0.088, y: origin.y + img.height * 0.091},
+        {x: origin.x + img.width * 0.044, y: origin.y + img.height * 0.121},
+        {x: origin.x, y: origin.y + img.height * 0.091}
+    ]
+}
+
+function getTileTopLeft(mapImage, row, col) {
+    var startX = mapImage.width * 0.027;
+    var startY = mapImage.height * 0.023;
+
+    var xcoord = startX + col * (mapImage.width * 0.0442);
+    var ycoord = startY + row * (mapImage.height * 0.091);
+
+    return {x: xcoord, y: ycoord};
+}
+
+function getTilePoints(mapImage, row, col) {
+    var origin = getTileTopLeft(mapImage, row, col);
+    return getHexPoints(origin, mapImage);
+}
+
+function mapPointToTile(img, point) {
+    for (row = 0; row < 9; row++) {
+        var col = row % 2 == 0 ? 0 : 1;
+        for (; col < 21; col += 2) {
+            var tilePoints = getTilePoints(img, row, col);
+            if (isPointInPoly(tilePoints, point)) {
+                return {row: row, col: col}
+            }
+        }
+    }
+}
+
+function setOpacity(element, alpha) {
+    var alphaPercent = alpha * 100;
+    return element
+        .css("opacity", alpha.toString())
+        // IE 8
+        .css("-ms-filter", `progid:DXImageTransform.Microsoft.Alpha(Opacity=${alphaPercent})`)
+        /* IE 7 */
+        .css("filter", `alpha(opacity=${alphaPercent})`);
+}
+
+function populateOrientations(self, coord, tileId) {
+    $.get("{{ url_for('legal_orientations') }}", {coord: coord, tileId: tileId})
+        .done(function(result) {
+            $("#tile-orientations").empty();
+
+            for (index in result["legal-orientations"]) {
+                var orientation = result["legal-orientations"][index];
+                var orientationStr = orientation.toString();
+                var tileIdStr = tileId.toString().padStart(3, "0");
+                var imgSrc = `{{ url_for('static', filename='images') }}/${tileIdStr}-${orientationStr}.png`;
+            
+                var tileImage = $("<img></img>")
+                    .attr("src", imgSrc)
+                    .attr("width", "88px")
+                    .attr("height", "100px")
+                    .css("display", "block")
+                    .css("margin-bottom", "10px")
+                    .attr("data-orientation", orientation)
+                    .click(function() {
+                        var self = this;
+
+                        $("#tile-orientations").children().each(function (index, element) {
+                            if (element != self) {
+                                setOpacity($(element), .2);
+                            }
+                        });
+
+                        setOpacity($(self), 1);
+                        $("#place-tile-button").prop("disabled", false);
+                        $("#place-tile-button").on("click", function() {
+                            drawTileOnMap(coord, tileId, $(self).data("orientation"));
+                            $('#tile-selector').modal('hide');
+                        });
+                    });
+                
+                $("#tile-orientations").append(setOpacity(tileImage, 1));
+            }
+        });
+}
+
+function populateModal(coord) {
+    $("#tileSelectorLabel").text(coord.toString());
+    
+    $("#place-tile-button").prop("disabled", true);
+    $("#place-tile-button").off("click");
+
+    $.get("{{ url_for('legal_tiles') }}", {coord: coord})
+        .done(function(result) {
+            $("#tile-options").empty();
+            $("#tile-orientations").empty();
+
+            for (index in result["legal-tile-ids"]) {
+                var tileId = result["legal-tile-ids"][index];
+                var tileIdStr = tileId.toString().padStart(3, "0");
+                var imgSrc = `{{ url_for('static', filename='images') }}/${tileIdStr}.png`;
+            
+                var tileImage = $("<img></img>")
+                    .attr("src", imgSrc)
+                    .attr("width", "100px")
+                    .attr("height", "88px")
+                    .css("display", "block")
+                    .css("margin-bottom", "10px")
+                    .attr("data-tile-id", tileId)
+                    .click(function() {
+                        var self = this;
+
+                        $("#place-tile-button").prop("disabled", true);
+                        $("#place-tile-button").off("click");
+
+                        $("#tile-options").children().each(function (index, element) {
+                            if (element != self) {
+                                setOpacity($(element), .2);
+                            }
+                        });
+
+                        setOpacity($(self), 1);
+
+                        populateOrientations(self, coord, $(self).data("tile-id"));
+                    });
+              
+                $("#tile-options").append(setOpacity(tileImage, 1));
+            }
+        });
+}
+
+$("#map-canvas").click(function(event) {
+    var posXOnImg = event.pageX - $(this).offset().left;
+    var posYOnImg = event.pageY - $(this).offset().top;
+
+    var rowAndCol = mapPointToTile(this, {x: posXOnImg, y: posYOnImg});
+    if (rowAndCol !== undefined) {
+        var coord = rowAndColToCoord(rowAndCol);
+        if (legalCoords.includes(coord)) {
+            populateModal(coord);
+            $('#tile-selector').modal('show');
+        }
+    }
+});

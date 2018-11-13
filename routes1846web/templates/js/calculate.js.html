@@ -1,0 +1,88 @@
+$("#routeModal").on("show.bs.modal", function () {
+    $("#route-list").empty();
+    $("#railroad-name")[0].selectedIndex = -1;
+});
+
+function getTrains(row) {
+    var trainCells = row.slice(1, 5).filter(train => !isEmpty(train));
+    return trainCells.length > 0 ? trainCells.join(",") : null
+}
+
+function calculate() {
+    if (!readyToCalculate()) {
+        return;
+    }
+
+    var postData = {
+        "railroads-json": JSON.stringify(railroadsTableData.map(row => [row[0], getTrains(row), row[5], row[6]])),
+        "board-state-json": JSON.stringify(placedTilesTableData),
+        "railroad-name": $("#railroad-name").val()
+    }
+    $.post("{{ url_for('calculate') }}", postData)
+        .done(function(resultJson) {
+            if ("routes" in resultJson) {
+                $("#route-list").empty();
+                if (!Object.keys(resultJson["routes"]).length) {
+                    $("<li />")
+                        .text("No valid routes were found for the given configuration and railroad.")
+                        .appendTo($("#route-list"));
+                } else {
+                    for (trainInfo in resultJson["routes"]) {
+                        var trainRouteInfo = resultJson["routes"][trainInfo];
+                        $("<li />")
+                            .text(trainRouteInfo[0] + ": " + trainRouteInfo[1].join(", ") + " (" + trainRouteInfo[2] + ")")
+                            .appendTo($("#route-list"));
+                    }
+                }
+            } else if ("error" in resultJson) {
+                $("#route-list").empty();
+                $("<div />")
+                    .css("color", "red")
+                    .text(resultJson["error"])
+                    .appendTo($("#route-list"));
+            }
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
+            alert(textStatus);
+        });
+}
+
+function readyToSelectRailroad() {
+    return placedTilesTableReady() &&
+        railroadsTableReady();
+}
+
+function readyToCalculate() {
+    return readyToSelectRailroad() &&
+        railroadSelected();
+}
+
+function placedTilesTableReady() {
+    return placedTilesTableData.length >= 2 &&
+        placedTilesTableData.every((row) => {
+            return row.every(col => !isEmpty(col)) ||
+                   row.every(col => isEmpty(col));
+        });
+}
+
+function railroadsTableReady() {
+    return railroadsTableData.length >= 2 &&
+        railroadsTableData.every(row =>
+                row.every(column => isEmpty(column)) ||
+                    (getTrains(row) !== null &&
+                    !isEmpty(row[5]) &&
+                    (!row[5].includes(chicago) || !isEmpty(row[6]))));
+}
+
+function railroadSelected() {
+    var railroadNames = railroadsTableData.map(railroad => railroad[0]).filter(railroad => !isEmpty(railroad));
+    return railroadNames.includes($("#railroad-name").val());
+}
+
+$("#railroad-name").change(function() {
+    calculate();
+    if (readyToCalculate()) {
+        $("#reload-calculate").show();
+    }
+});
+$("#reload-calculate").click(calculate);
