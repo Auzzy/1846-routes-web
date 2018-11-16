@@ -7,6 +7,14 @@ function findNextEmptyRow() {
 }
 
 function placeTile(coord, tileId, orientation, source) {
+    var newRow = placedTilesTableData.every(row =>
+        row[0] !== coord || row[1] !== tileId || row[2] !== orientation
+    );
+
+    if (!newRow) {
+        return;
+    }
+
     var row = findNextEmptyRow();
     var source = source || "api";
 
@@ -111,6 +119,12 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
                     }
 
                     placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(newValue) ? false : OrientationEditor);
+                }
+
+                if (col === 2) {
+                    if (source !== "map") {
+                        placeTileOnMap(placedTilesTableData[row][0], placedTilesTableData[row][1], placedTilesTableData[row][2]);
+                    }
                 }
             });
         }
