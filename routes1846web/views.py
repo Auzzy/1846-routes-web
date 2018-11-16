@@ -41,21 +41,28 @@ PLACED_TILES_COLUMN_MAP = {
 
 RAILROADS_COLUMN_NAMES = [RAILROADS_COLUMN_MAP[colname] for colname in railroads.FIELDNAMES]
 PLACED_TILES_COLUMN_NAMES = [PLACED_TILES_COLUMN_MAP[colname] for colname in boardstate.FIELDNAMES]
+_TILE_COORDS = []
+
+def get_tile_coords():
+    global _TILE_COORDS
+
+    if not _TILE_COORDS:
+        tile_coords = []
+        for row, cols in sorted(_CELL_DB.items()):
+            for col in sorted(cols):
+                coord = "{}{}".format(row, col)
+                space = _get_space(coord)
+                if not space or (space.phase is not None and space.phase < 4):
+                    tile_coords.append(coord)
+        _TILE_COORDS = tile_coords
+    return _TILE_COORDS
 
 @app.route("/")
 def main():
-    tile_coords = []
-    for row, cols in sorted(_CELL_DB.items()):
-        for col in sorted(cols):
-            coord = "{}{}".format(row, col)
-            space = _get_space(coord)
-            if not space or (space.phase is not None and space.phase < 4):
-                tile_coords.append(coord)
-
     return render_template("index.html",
             railroads_colnames=RAILROADS_COLUMN_NAMES,
             placed_tiles_colnames=PLACED_TILES_COLUMN_NAMES,
-            tile_coords=tile_coords)
+            tile_coords=get_tile_coords())
 
 @app.route("/calculate", methods=["POST"])
 def calculate():
@@ -119,6 +126,21 @@ def _get_orientations(coord, tile_id):
             continue
 
     return orientations
+
+@app.route("/board/tile-coords")
+def legal_tile_coords():
+    LOG.info("Legal tile coordinates request.")
+
+    current_coord = request.args.get("coord")
+    existing_tile_coords = {coord for coord in json.loads(request.args.get("tile_coords")) if coord}
+
+    legal_tile_coordinates = set(get_tile_coords()) - existing_tile_coords
+    if current_coord:
+        legal_tile_coordinates.add(current_coord)
+
+    LOG.info("Legal tile coordinates response: {}".format(legal_tile_coordinates))
+
+    return jsonify({"tile-coords": list(sorted(legal_tile_coordinates))})
 
 @app.route("/board/tile-image")
 def board_tile_image():

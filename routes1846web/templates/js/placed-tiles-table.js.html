@@ -45,6 +45,24 @@ function removeTile(coord, source) {
     placedTilesTable.setDataAtCell(row, 0, null, source);
 }
 
+
+function tileCoordsSourceFromCoord(coord) {
+    return function (query, process) {
+        var tileCoords = placedTilesTableData.map(row => row[0]);
+        $.get("{{ url_for('legal_tile_coords') }}", {coord: coord, tile_coords: JSON.stringify(tileCoords)})
+            .done(function(result) {
+                process(result["tile-coords"]);
+            });
+    }
+}
+
+function tileCoordsSource(row) {
+    return function(query, process) {
+        var source = tileCoordsSourceFromCoord(placedTilesTableData[row][0]);
+        source(query, process);
+    }
+}
+
 function tileIdSourceFromCoord(coord) {
     return function (query, process) {
         $.get("{{ url_for('legal_tiles') }}", {coord: coord})
@@ -78,6 +96,7 @@ function orientationSource(row) {
 }
 
 function addPlacedTileTableSources(row) {
+    placedTilesTable.setCellMeta(row, 0, "source", tileCoordsSource(row));
     placedTilesTable.setCellMeta(row, 1, "source", tileIdSource(row));
     placedTilesTable.setCellMeta(row, 2, "source", orientationSource(row));
 }
@@ -101,7 +120,9 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
         {
             type: 'dropdown',
             allowInvalid: false,
-            source: {{ tile_coords | tojson | safe }}
+            source: [],
+            // Required to allow pasting when using a dynamic source. I'm unclear as to why...
+            editor: 'dropdown'
         },
         {
             type: 'dropdown',
@@ -188,11 +209,12 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
             var orientation = colNums.includes(2) ? parseInt(rowData[colNums.indexOf(2)], 10) : placedTilesTableData[rowNum][2];
 
             if (colNums.includes(0)) {
-                var legalValues = placedTilesTable.getCellMeta(rowNum, 0).source;
-                if (!legalValues.includes(coord)) {
-                    data.splice(dataIndex, 1, new Array(placedTilesTableData[0].length).fill(null));
-                    return;
-                }
+                var sourceFunc = tileCoordsSourceFromCoord(coord);
+                sourceFunc("", function(legalValues) {
+                    if (!legalValues.includes(coord)) {
+                        placedTilesTable.setDataAtCell(rowNum, 0, null, "edit");
+                    }
+                });
             }
             if (colNums.includes(1)) {
                 data[dataIndex][colNums.indexOf(1)] = tileId;
