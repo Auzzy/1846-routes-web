@@ -8,6 +8,8 @@ $("#placed-tiles-board-canvas")
     .prop("width", mapImage.width)
     .prop("height", mapImage.height);
 
+
+
 function drawTileOnMap(coord, tileId, orientation) {
     var mapImg = $("#placed-tiles-board").get(0);
     var mapCanvas = $("#placed-tiles-board-canvas").get(0);
@@ -24,6 +26,16 @@ function drawTileOnMap(coord, tileId, orientation) {
 
     var context = mapCanvas.getContext('2d');
     context.drawImage(tileImage, tileOrigin.x, tileOrigin.y, mapImg.width * 0.088, mapImg.height * 0.121);
+}
+
+function placeTileOnMap(coord, tileId, orientation) {
+    // Ensure we only attempt these actions if all 3 requirements are provided.
+    if (isEmpty(coord) || isEmpty(tileId) || isEmpty(orientation)) {
+        return;
+    }
+
+    drawTileOnMap(coord, tileId, orientation);
+    placeTile(coord, tileId, orientation, "map");
 }
 
 function rowAndColToCoord(rowAndCol) {
@@ -120,7 +132,7 @@ function populateOrientations(self, coord, tileId) {
                         setOpacity($(self), 1);
                         $("#place-tile-button").prop("disabled", false);
                         $("#place-tile-button").on("click", function() {
-                            drawTileOnMap(coord, tileId, $(self).data("orientation"));
+                            placeTileOnMap(coord, tileId, $(self).data("orientation"));
                             $('#tile-selector').modal('hide');
                         });
                     });

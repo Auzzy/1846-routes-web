@@ -1,3 +1,20 @@
+function findNextEmptyRow() {
+    for (row = 0; row < placedTilesTableData.length; row++) {
+        if (placedTilesTable.isEmptyRow(row)) {
+            return row;
+        }
+    }
+}
+
+function placeTile(coord, tileId, orientation, source) {
+    var row = findNextEmptyRow();
+    var source = source || "api";
+
+    placedTilesTable.setDataAtCell(row, 0, coord, source);
+    placedTilesTable.setDataAtCell(row, 1, tileId, source);
+    placedTilesTable.setDataAtCell(row, 2, orientation, source);
+}
+
 function tileIdSourceFromCoord(coord) {
     return function (query, process) {
         $.get("{{ url_for('legal_tiles') }}", {coord: coord})
