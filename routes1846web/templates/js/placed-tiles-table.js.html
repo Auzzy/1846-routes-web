@@ -6,6 +6,15 @@ function findNextEmptyRow() {
     }
 }
 
+function findRowByCoord(coord) {
+    for (row = 0; row < placedTilesTableData.length; row++) {
+        if (placedTilesTableData[row][0] === coord) {
+            return row;
+        }
+    }
+    return null;
+}
+
 function placeTile(coord, tileId, orientation, source) {
     var newRow = placedTilesTableData.every(row =>
         row[0] !== coord || row[1] !== tileId || row[2] !== orientation
@@ -21,6 +30,17 @@ function placeTile(coord, tileId, orientation, source) {
     placedTilesTable.setDataAtCell(row, 0, coord, source);
     placedTilesTable.setDataAtCell(row, 1, tileId, source);
     placedTilesTable.setDataAtCell(row, 2, orientation, source);
+}
+
+function removeTile(coord, source) {
+    var row = findRowByCoord(coord);
+    if (row === null) {
+        return;
+    }
+
+    var source = source || "api";
+
+    placedTilesTable.setDataAtCell(row, 0, null, source);
 }
 
 function tileIdSourceFromCoord(coord) {
@@ -98,6 +118,15 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
             allowHtml: true
         }
     ],
+    beforeChange: (changes, source) => {
+        if (source !== "map") {
+            changes.forEach(([row, col, oldValue, newValue]) => {
+                if (col === 0 && isEmpty(newValue)) {
+                    removeTileFromMap(placedTilesTableData[row][0]);
+                }
+            });
+        }
+    },
     afterChange: (changes, source) => {
         if (changes !== null) {
             changes.forEach(([row, col, oldValue, newValue]) => {
@@ -118,11 +147,16 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
                         placedTilesTable.render();
                     }
 
+                    if (source !== "map") {
+                        removeTileFromMap(placedTilesTableData[row][0]);
+                    }
+
                     placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(newValue) ? false : OrientationEditor);
                 }
 
                 if (col === 2) {
                     if (source !== "map") {
+                        removeTileFromMap(placedTilesTableData[row][0]);
                         placeTileOnMap(placedTilesTableData[row][0], placedTilesTableData[row][1], placedTilesTableData[row][2]);
                     }
                 }

@@ -38,6 +38,23 @@ function placeTileOnMap(coord, tileId, orientation) {
     placeTile(coord, tileId, orientation, "map");
 }
 
+function removeTileFromMap(coord) {
+    var mapImg = $("#placed-tiles-board").get(0);
+    var mapCanvas = $("#placed-tiles-board-canvas").get(0);
+
+    var rowAndCol = coordToRowAndCol(coord);
+    var tilePoints = getTilePoints(mapCanvas, rowAndCol.row, rowAndCol.col);
+
+    var mapContext = mapCanvas.getContext("2d");
+    mapContext.globalCompositeOperation = 'destination-out';
+    mapContext.beginPath();
+    mapContext.moveTo(tilePoints[0].x, tilePoints[0].y);
+    tilePoints.slice(1).forEach(point => mapContext.lineTo(point.x, point.y));
+    mapContext.closePath();
+    mapContext.fill();
+    mapContext.globalCompositeOperation = 'source-over';
+}
+
 function rowAndColToCoord(rowAndCol) {
     // We add 1 since the first row with valid placements is B.
     var rowStr = String.fromCharCode(rowAndCol.row + 1 + 65);
@@ -119,6 +136,8 @@ function populateOrientations(self, coord, tileId) {
                     .attr("height", "100px")
                     .css("display", "block")
                     .css("margin-bottom", "10px")
+                    .attr("data-coord", coord)
+                    .attr("data-tile-id", tileId)
                     .attr("data-orientation", orientation)
                     .click(function() {
                         var self = this;
@@ -132,7 +151,7 @@ function populateOrientations(self, coord, tileId) {
                         setOpacity($(self), 1);
                         $("#place-tile-button").prop("disabled", false);
                         $("#place-tile-button").on("click", function() {
-                            placeTileOnMap(coord, tileId, $(self).data("orientation"));
+                            placeTileOnMap($(self).attr("data-coord"), $(self).attr("data-tile-id"), $(self).attr("data-orientation"));
                             $('#tile-selector').modal('hide');
                         });
                     });
@@ -144,7 +163,9 @@ function populateOrientations(self, coord, tileId) {
 
 function populateModal(coord) {
     $("#tileSelectorLabel").text(coord.toString());
-    
+
+    $("#delete-tile-button").attr("data-coord", coord.toString());
+
     $("#place-tile-button").prop("disabled", true);
     $("#place-tile-button").off("click");
 
@@ -164,6 +185,7 @@ function populateModal(coord) {
                     .attr("height", "88px")
                     .css("display", "block")
                     .css("margin-bottom", "10px")
+                    .attr("data-coord", coord)
                     .attr("data-tile-id", tileId)
                     .click(function() {
                         var self = this;
@@ -179,7 +201,7 @@ function populateModal(coord) {
 
                         setOpacity($(self), 1);
 
-                        populateOrientations(self, coord, $(self).data("tile-id"));
+                        populateOrientations(self, $(self).attr("data-coord"), $(self).attr("data-tile-id"));
                     });
               
                 $("#tile-options").append(setOpacity(tileImage, 1));
@@ -199,4 +221,8 @@ $("#placed-tiles-board-canvas").click(function(event) {
             $('#tile-selector').modal('show');
         }
     }
+});
+
+$("#delete-tile-button").click(function(event) {
+    removeTile($(this).attr("data-coord"));
 });
