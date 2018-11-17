@@ -24,7 +24,11 @@ function placeTile(coord, tileId, orientation, source) {
         return;
     }
 
-    var row = findNextEmptyRow();
+    var row = findRowByCoord(coord);
+    if (row === null) {
+        // This coordinate isn't already represented, so get a new row.
+        row = findNextEmptyRow();
+    }
     var source = source || "api";
 
     placedTilesTable.setDataAtCell([
@@ -201,6 +205,20 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
         data.slice().forEach(function(row, index) {
             data.splice(index, 1, row.map(col => col.trim()));
         });
+
+        if (colNums.includes(0)) {
+            // Remove duplicate coordinates.
+            data.slice().forEach(function(row, index) {
+                while (true) {
+                    var nextMatch = data.slice(index + 1).findIndex(item => item[0] == row[0]);
+                    if (nextMatch == -1) {
+                        break;
+                    }
+
+                    data.splice(index + 1 + nextMatch, 1);
+                }
+            });
+        }
 
         data.slice().forEach(function(rowData, dataIndex) {
             var rowNum = dataIndex + pasteArea.startRow;
