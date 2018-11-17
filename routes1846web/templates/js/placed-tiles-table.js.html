@@ -27,9 +27,11 @@ function placeTile(coord, tileId, orientation, source) {
     var row = findNextEmptyRow();
     var source = source || "api";
 
-    placedTilesTable.setDataAtCell(row, 0, coord, source);
-    placedTilesTable.setDataAtCell(row, 1, tileId, source);
-    placedTilesTable.setDataAtCell(row, 2, orientation, source);
+    placedTilesTable.setDataAtCell([
+        [row, 0, coord],
+        [row, 1, tileId],
+        [row, 2, orientation]
+    ]);
 }
 
 function removeTile(coord, source) {
@@ -129,37 +131,36 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
     },
     afterChange: (changes, source) => {
         if (changes !== null) {
-            changes.forEach(([row, col, oldValue, newValue]) => {
-                if (col === 0) {
-                    if (source !== "CopyPaste.paste") {
-                        placedTilesTableData[row][1] = null;
-                        placedTilesTableData[row][2] = null;
-                        placedTilesTable.render();
-                    }
+            var changesByRow = {};
+            changes.forEach(function(change) {
+                var row = change[0].toString();
+                if (!Object.keys(changesByRow).includes(row)) {
+                    changesByRow[row] = {};
+                }
+                changesByRow[row][change[1]] = change[3];
+            });
 
-                    placedTilesTable.setCellMeta(row, 1, "editor", isEmpty(newValue) ? false : TileEditor);
+            Object.entries(changesByRow).forEach(([row, rowData]) => {
+                if (placedTilesTableData[row].some(cell => isEmpty(cell))) {
+                    removeTileFromMap(placedTilesTableData[row][0]);
+                } else {
+                    placeTileOnMap(placedTilesTableData[row][0], placedTilesTableData[row][1], placedTilesTableData[row][2]);
+                }
+
+                var changedColumns = Object.keys(rowData);
+                if (changedColumns.includes("0")) {
+                    placedTilesTableData[row][1] = changedColumns.includes("1") ? rowData[1] : null;
+                    placedTilesTableData[row][2] = changedColumns.includes("2") ? rowData[2] : null;
+                    placedTilesTable.setCellMeta(row, 1, "editor", isEmpty(placedTilesTableData[row][0]) ? false : TileEditor);
                     placedTilesTable.setCellMeta(row, 2, "editor", false);
                 }
 
-                if (col === 1) {
-                    if (source !== "CopyPaste.paste") {
-                        placedTilesTableData[row][2] = null;
-                        placedTilesTable.render();
-                    }
-
-                    if (source !== "map") {
-                        removeTileFromMap(placedTilesTableData[row][0]);
-                    }
-
-                    placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(newValue) ? false : OrientationEditor);
+                if (changedColumns.includes("1")) {
+                    placedTilesTableData[row][2] = changedColumns.includes("2") ? rowData[2] : null;
+                    placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(placedTilesTableData[row][1]) ? false : OrientationEditor);
                 }
 
-                if (col === 2) {
-                    if (source !== "map") {
-                        removeTileFromMap(placedTilesTableData[row][0]);
-                        placeTileOnMap(placedTilesTableData[row][0], placedTilesTableData[row][1], placedTilesTableData[row][2]);
-                    }
-                }
+                placedTilesTable.render();
             });
         }
 

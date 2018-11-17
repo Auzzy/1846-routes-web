@@ -11,6 +11,11 @@ $("#placed-tiles-board-canvas")
 
 
 function drawTileOnMap(coord, tileId, orientation) {
+    // Ensure we only draw if all 3 requirements are provided.
+    if (isEmpty(coord) || isEmpty(tileId) || isEmpty(orientation)) {
+        return;
+    }
+
     var mapImg = $("#placed-tiles-board").get(0);
     var mapCanvas = $("#placed-tiles-board-canvas").get(0);
 
@@ -29,16 +34,14 @@ function drawTileOnMap(coord, tileId, orientation) {
 }
 
 function placeTileOnMap(coord, tileId, orientation) {
-    // Ensure we only attempt these actions if all 3 requirements are provided.
-    if (isEmpty(coord) || isEmpty(tileId) || isEmpty(orientation)) {
-        return;
-    }
-
     drawTileOnMap(coord, tileId, orientation);
-    placeTile(coord, tileId, orientation, "map");
 }
 
 function removeTileFromMap(coord) {
+    if (isEmpty(coord)) {
+        return;
+    }
+
     var mapImg = $("#placed-tiles-board").get(0);
     var mapCanvas = $("#placed-tiles-board-canvas").get(0);
 
@@ -151,7 +154,7 @@ function populateOrientations(self, coord, tileId) {
                         setOpacity($(self), 1);
                         $("#place-tile-button").prop("disabled", false);
                         $("#place-tile-button").on("click", function() {
-                            placeTileOnMap($(self).attr("data-coord"), $(self).attr("data-tile-id"), $(self).attr("data-orientation"));
+                            placeTile($(self).attr("data-coord"), $(self).attr("data-tile-id"), $(self).attr("data-orientation"));
                             $('#tile-selector').modal('hide');
                         });
                     });
