@@ -15,6 +15,7 @@ function calculate() {
 
     var postData = {
         "railroads-json": JSON.stringify(railroadsTableData.map(row => [row[0], getTrains(row), row[5], row[6]])),
+        "private-companies-json": JSON.stringify(privateCompaniesTableData),
         "board-state-json": JSON.stringify(placedTilesTableData),
         "railroad-name": $("#railroad-name").val()
     }

@@ -6,8 +6,8 @@ import traceback
 
 from flask import jsonify, render_template, request
 
-from routes1846 import boardstate, find_best_routes, railroads, tiles
-from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell
+from routes1846 import boardstate, boardtile, find_best_routes, railroads, tiles
+from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell, board_cells
 
 from routes1846web.routes1846web import app
 
@@ -39,8 +39,25 @@ PLACED_TILES_COLUMN_MAP = {
     "orientation": "orientation"
 }
 
-RAILROADS_COLUMN_NAMES = [RAILROADS_COLUMN_MAP[colname] for colname in railroads.FIELDNAMES]
+PRIVATE_COMPANIES = (
+    "Steamboat Company",
+    "Meat Packing Company",
+    "Mail Contract"
+)
+
+PRIVATE_COMPANY_TO_COLUMN = {
+    "Steamboat Company": "port_coord",
+    "Meat Packing Company": "meat_packing_coord",
+    "Mail Contract": "has_mail_contract"
+}
+
+RAILROADS_COLUMN_NAMES = [RAILROADS_COLUMN_MAP[colname] for colname in railroads.RAILROAD_FIELDNAMES]
 PLACED_TILES_COLUMN_NAMES = [PLACED_TILES_COLUMN_MAP[colname] for colname in boardstate.FIELDNAMES]
+PRIVATE_COMPANY_COLUMN_NAMES = ["name", "owner", "token coordinate"]
+
+SEAPORT_COORDS = [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.port_value]
+MEAT_COORDS = [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.meat_value]
+
 _TILE_COORDS = []
 
 def get_tile_coords():
@@ -61,17 +78,39 @@ def get_tile_coords():
 def main():
     return render_template("index.html",
             railroads_colnames=RAILROADS_COLUMN_NAMES,
+            private_company_rownames=PRIVATE_COMPANIES,
+            private_company_colnames=PRIVATE_COMPANY_COLUMN_NAMES,
             placed_tiles_colnames=PLACED_TILES_COLUMN_NAMES,
             tile_coords=get_tile_coords())
+
+def _build_railroad_rows(railroads_state_rows, private_companies_rows):
+    railroad_rows = []
+    for railroad_row in railroads_state_rows:
+        railroad_name = railroad_row[railroads.RAILROAD_FIELDNAMES.index("name")]
+        if any(val for val in railroad_row):
+            railroad_private_companies = [None] * len(PRIVATE_COMPANIES)
+            for private_row in private_companies_rows:
+                row = railroads.PRIVATE_COMPANY_FIELDNAMES.index(PRIVATE_COMPANY_TO_COLUMN[private_row[PRIVATE_COMPANY_COLUMN_NAMES.index("name")]])
+                company_owner = private_row[PRIVATE_COMPANY_COLUMN_NAMES.index("owner")]
+                if company_owner and railroad_name == company_owner:
+                    company_name = private_row[PRIVATE_COMPANY_COLUMN_NAMES.index("name")]
+                    token_coord = private_row[PRIVATE_COMPANY_COLUMN_NAMES.index("token coordinate")]
+                    railroad_private_companies[row] = True if company_name.lower() == "mail contract" else token_coord
+            railroad_row.extend(railroad_private_companies)
+            railroad_rows.append(dict(zip(railroads.FIELDNAMES, railroad_row)))
+
+    return railroad_rows
 
 @app.route("/calculate", methods=["POST"])
 def calculate():
     railroads_state_rows = json.loads(request.form.get("railroads-json"))
+    private_companies_rows = json.loads(request.form.get("private-companies-json"))
     board_state_rows = json.loads(request.form.get("board-state-json"))
     railroad_name = request.form["railroad-name"]
 
     LOG.info("Calculate request.")
     LOG.info("Target railroad: {}".format(railroad_name))
+    LOG.info("Private companies: {}".format(private_companies_rows))
     LOG.info("Railroad input: {}".format(railroads_state_rows))
     LOG.info("Board input: {}".format(board_state_rows))
 
@@ -82,7 +121,7 @@ def calculate():
     routes_json = {}
     try:
         board = boardstate.load([dict(zip(boardstate.FIELDNAMES, row)) for row in board_state_rows if any(val for val in row)])
-        railroad_dict = railroads.load(board, [dict(zip(railroads.FIELDNAMES, row)) for row in railroads_state_rows if any(val for val in row)])
+        railroad_dict = railroads.load(board, _build_railroad_rows(railroads_state_rows, private_companies_rows))
         board.validate()
 
         if railroad_name not in railroad_dict:
@@ -105,7 +144,6 @@ def calculate():
     return jsonify(routes_json)
 
 def _get_space(coord):
-    from routes1846 import boardtile
     space = None
     for tile in boardtile.load():
         if str(tile.cell) == coord:
@@ -241,3 +279,20 @@ def chicago_stations():
     LOG.info("Legal Chicago stations response: {}".format(legal_stations))
 
     return jsonify({"chicago-stations": legal_stations})
+
+@app.route("/railroads/legal-token-coords")
+def legal_token_coords():
+    company_name = request.args.get("companyName")
+
+    LOG.info("Legal %s token coordinate request.", company_name)
+
+    if company_name.lower() == "steamboat company":
+        coords = SEAPORT_COORDS
+    elif company_name.lower() == "meat packing company":
+        coords = MEAT_COORDS
+    else:
+        raise ValueError("Received unsupport private company name: {}".format(company_name))
+
+    LOG.info("Legal %s token coordinate response: %s", company_name, coords)
+
+    return jsonify({"coords": coords})

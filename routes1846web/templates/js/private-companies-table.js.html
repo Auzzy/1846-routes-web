@@ -1,0 +1,77 @@
+function privateCompanyOwnerSource(query, process) {
+    process(railroadsTableData.map(row => row[0]));
+}
+
+function tokenCoordSource(row) {
+    return function(query, process) {
+        $.get("{{ url_for('legal_token_coords') }}", {companyName: privateCompaniesTableData[row][0]})
+            .done(function(result) {
+                process(result["coords"]);
+            });
+    }
+}
+
+var privateCompaniesTableData = [
+    {%- for name in private_company_rownames %}
+    ["{{ name }}"{%- for k in range(private_company_colnames | length - 1) -%}, null{%- endfor -%}]{%- if not loop.last -%},{%- endif -%}
+    {%- endfor %}
+];
+
+var privateCompaniesTable = new Handsontable(document.getElementById("private-companies-table"), {
+    data: privateCompaniesTableData,
+    rowHeaders: false,
+    colHeaders: {{ private_company_colnames | tojson | safe }},
+    enterMoves: {row: 0, col: 1},
+    columns: [
+        {
+            editor: false
+        },
+        {
+            type: "dropdown",
+            allowInvalid: false,
+            source: privateCompanyOwnerSource,
+            width: 170
+        },
+        {
+            allowInvalid: false,
+            source: [],
+            editor: false
+        }
+    ],
+    cells: function (row, col, prop) {
+        var cellProperties = {};
+        if (col === 1) {
+            cellProperties.editor = isEmpty(this.instance.getDataAtCell(row, 0)) ? false : "dropdown";
+        } else if (col === 2) {
+            cellProperties.editor = false;
+            if (row === 0 || row === 1) {
+                cellProperties.type = "dropdown";
+                cellProperties.source = tokenCoordSource(row);
+                cellProperties.editor = isEmpty(this.instance.getDataAtCell(row, 1)) ? false : "dropdown";
+            } else {
+                cellProperties.editor = "text";
+                cellProperties.readOnly = true;
+            }
+        }
+        return cellProperties;
+    },
+    afterChange: (changes) => {
+        if (changes != null) {
+            var colHeaders = privateCompaniesTable.getColHeader();
+            var ownerColumn = colHeaders.findIndex(header => header == "owner");
+            var coordColumn = colHeaders.findIndex(header => header == "token coordinate");
+
+            changes.forEach(([row, col, oldValue, newValue]) => {
+                if (col == ownerColumn && isEmpty(newValue)) {
+                    privateCompaniesTableData[row][coordColumn] = null;
+                }
+            });
+            privateCompaniesTable.render();
+        }
+    }
+});
+
+// Handsontable isn't properly displayed due to being hidden. Rendering once it's visible solves the problem.
+$("#railroads-tab").on("shown.bs.tab", function(e) {
+    privateCompaniesTable.render();
+});
