@@ -1,5 +1,5 @@
 $("#routeModal").on("show.bs.modal", function () {
-    $("#route-list").empty();
+    $("#calculate-modal-body").empty();
     $("#railroad-name")[0].selectedIndex = -1;
 });
 
@@ -13,6 +13,13 @@ function calculate() {
         return;
     }
 
+    $("<div />")
+        .addClass("spinner")
+        .css("width", "50px")
+        .css("height", "50px")
+        .css("margin", "auto")
+        .appendTo($("#calculate-modal-body"));
+
     var postData = {
         "railroads-json": JSON.stringify(railroadsTableData.map(row => [row[0], getTrains(row), row[5], row[6]])),
         "private-companies-json": JSON.stringify(privateCompaniesTableData),
@@ -21,8 +28,11 @@ function calculate() {
     }
     $.post("{{ url_for('calculate') }}", postData)
         .done(function(resultJson) {
+            $("#calculate-modal-body").empty();
             if ("routes" in resultJson) {
-                $("#route-list").empty();
+                $("<ul />")
+                    .attr("id", "route-list")
+                    .appendTo($("#calculate-modal-body"));
                 if (!Object.keys(resultJson["routes"]).length) {
                     $("<li />")
                         .text("No valid routes were found for the given configuration and railroad.")
@@ -36,11 +46,10 @@ function calculate() {
                     }
                 }
             } else if ("error" in resultJson) {
-                $("#route-list").empty();
                 $("<div />")
                     .css("color", "red")
                     .text(resultJson["error"])
-                    .appendTo($("#route-list"));
+                    .appendTo($("#calculate-modal-body"));
             }
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
