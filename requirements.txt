@@ -2,3 +2,6 @@ routes-1846 == 0.3
 
 Flask == 1.0.2
 Flask-WTF==0.14.2
+
+redis == 2.10.6
+rq == 0.12

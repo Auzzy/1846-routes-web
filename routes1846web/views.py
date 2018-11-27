@@ -5,14 +5,18 @@ import tempfile
 import traceback
 
 from flask import jsonify, render_template, request
+from rq import Queue
 
 from routes1846 import boardstate, boardtile, find_best_routes, railroads, tiles
 from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell, board_cells
 
 from routes1846web.routes1846web import app
+from routes1846web.calculator import redis_conn
+
 
 LOG = logging.getLogger(__name__)
 
+CALCULATOR_QUEUE = Queue(connection=redis_conn)
 
 CHICAGO_STATION_SIDES = (0, 3, 4, 5)
 CHICAGO_STATION_COORDS = collections.OrderedDict([(str(CHICAGO_CELL.neighbors[side]), side) for side in CHICAGO_STATION_SIDES])
@@ -118,30 +122,56 @@ def calculate():
         if row[3]:
             row[3] = CHICAGO_STATION_COORDS[row[3]]
 
-    routes_json = {}
-    try:
-        board = boardstate.load([dict(zip(boardstate.FIELDNAMES, row)) for row in board_state_rows if any(val for val in row)])
-        railroad_dict = railroads.load(board, _build_railroad_rows(railroads_state_rows, private_companies_rows))
-        board.validate()
+    job = CALCULATOR_QUEUE.enqueue(calculate_worker, railroads_state_rows, private_companies_rows, board_state_rows, railroad_name, timeout="5m")
 
-        if railroad_name not in railroad_dict:
-            raise ValueError("Railroad chosen: \"{}\". Valid railroads: {}".format(railroad_name, ", ".join(railroad_dict.keys())))
+    return jsonify({"jobId": job.id})
 
-        best_route_set = find_best_routes(board, railroad_dict, railroad_dict[railroad_name])
-        routes_json["routes"] = []
-        for route in best_route_set:
-            routes_json["routes"].append([
-                str(route.train),
-                [str(space.cell) for space in route],
-                route.value
-            ])
-    except Exception as exc:
-        routes_json["error"] = str(exc)
-        traceback.print_exc()
+@app.route("/calculate/result")
+def calculate_result():
+    job_id = request.args.get("jobId")
+    job = CALCULATOR_QUEUE.fetch_job(job_id)
+    if not job:
+        # The job ID couldn't be found, either because it's invalid, or the job was cancelled.
+        return jsonify({})
 
-    LOG.info("Calculate response: {}".format(routes_json))
+    if job.is_finished:
+        routes_json = {}
+        try:
+            routes_json["routes"] = []
+            for route in job.result:
+                routes_json["routes"].append([
+                    str(route.train),
+                    [str(space.cell) for space in route],
+                    route.value
+                ])
+        except Exception as exc:
+            routes_json["error"] = str(exc)
+            traceback.print_exc()
 
-    return jsonify(routes_json)
+        LOG.info("Calculate response: {}".format(routes_json))
+
+        return jsonify(routes_json)
+    else:
+        # The job is in progress
+        return jsonify({"jobId": job_id})
+
+@app.route("/calculate/cancel", methods=["POST"])
+def cancel_calculate_request():
+    job_id = request.form.get("jobId")
+    job = CALCULATOR_QUEUE.fetch_job(job_id)
+    if job:
+        job.delete()
+    return jsonify({})
+
+def calculate_worker(railroads_state_rows, private_companies_rows, board_state_rows, railroad_name):
+    board = boardstate.load([dict(zip(boardstate.FIELDNAMES, row)) for row in board_state_rows if any(val for val in row)])
+    railroad_dict = railroads.load(board, _build_railroad_rows(railroads_state_rows, private_companies_rows))
+    board.validate()
+
+    if railroad_name not in railroad_dict:
+        raise ValueError("Railroad chosen: \"{}\". Valid railroads: {}".format(railroad_name, ", ".join(railroad_dict.keys())))
+
+    return find_best_routes(board, railroad_dict, railroad_dict[railroad_name])
 
 def _get_space(coord):
     space = None

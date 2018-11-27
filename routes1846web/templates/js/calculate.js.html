@@ -3,9 +3,56 @@ $("#routeModal").on("show.bs.modal", function () {
     $("#railroad-name")[0].selectedIndex = -1;
 });
 
+$('#routeModal').on('hidden.bs.modal', function () {
+    var jobId = $("#routeModal").data("jobId");
+    if (jobId !== undefined) {
+        $.post("{{ url_for('cancel_calculate_request') }}", {jobId: jobId});
+        $("#routeModal").removeData("jobId");
+    }
+});
+
 function getTrains(row) {
     var trainCells = row.slice(1, 5).filter(train => !isEmpty(train));
     return trainCells.length > 0 ? trainCells.join(",") : null
+}
+
+function requestAndDisplayRoutes(jobId) {
+    $.get("{{ url_for('calculate_result') }}", {jobId: jobId})
+        .done(function(resultJson) {
+            if (!jQuery.isEmptyObject(resultJson)) {
+                if (resultJson.hasOwnProperty("jobId")) {
+                    setTimeout(requestAndDisplayRoutes, 1000, resultJson["jobId"]);
+                } else {
+                    $("#routeModal").removeData("jobId");
+                    $("#calculate-modal-body").empty();
+                    if ("routes" in resultJson) {
+                        $("<ul />")
+                            .attr("id", "route-list")
+                            .appendTo($("#calculate-modal-body"));
+                        if (!Object.keys(resultJson["routes"]).length) {
+                            $("<li />")
+                                .text("No valid routes were found for the given configuration and railroad.")
+                                .appendTo($("#route-list"));
+                        } else {
+                            for (trainInfo in resultJson["routes"]) {
+                                var trainRouteInfo = resultJson["routes"][trainInfo];
+                                $("<li />")
+                                    .text(trainRouteInfo[0] + ": " + trainRouteInfo[1].join(", ") + " (" + trainRouteInfo[2] + ")")
+                                    .appendTo($("#route-list"));
+                            }
+                        }
+                    } else if ("error" in resultJson) {
+                        $("<div />")
+                            .css("color", "red")
+                            .text(resultJson["error"])
+                            .appendTo($("#calculate-modal-body"));
+                    }
+                }
+            }
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
+            alert(textStatus);
+        });
 }
 
 function calculate() {
@@ -28,29 +75,8 @@ function calculate() {
     }
     $.post("{{ url_for('calculate') }}", postData)
         .done(function(resultJson) {
-            $("#calculate-modal-body").empty();
-            if ("routes" in resultJson) {
-                $("<ul />")
-                    .attr("id", "route-list")
-                    .appendTo($("#calculate-modal-body"));
-                if (!Object.keys(resultJson["routes"]).length) {
-                    $("<li />")
-                        .text("No valid routes were found for the given configuration and railroad.")
-                        .appendTo($("#route-list"));
-                } else {
-                    for (trainInfo in resultJson["routes"]) {
-                        var trainRouteInfo = resultJson["routes"][trainInfo];
-                        $("<li />")
-                            .text(trainRouteInfo[0] + ": " + trainRouteInfo[1].join(", ") + " (" + trainRouteInfo[2] + ")")
-                            .appendTo($("#route-list"));
-                    }
-                }
-            } else if ("error" in resultJson) {
-                $("<div />")
-                    .css("color", "red")
-                    .text(resultJson["error"])
-                    .appendTo($("#calculate-modal-body"));
-            }
+            $("#routeModal").data("jobId", resultJson["jobId"]);
+            requestAndDisplayRoutes(resultJson["jobId"]);
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
             alert(textStatus);
