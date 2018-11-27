@@ -127,13 +127,13 @@ def calculate():
         if railroad_name not in railroad_dict:
             raise ValueError("Railroad chosen: \"{}\". Valid railroads: {}".format(railroad_name, ", ".join(railroad_dict.keys())))
 
-        best_routes = find_best_routes(board, railroad_dict, railroad_dict[railroad_name])
+        best_route_set = find_best_routes(board, railroad_dict, railroad_dict[railroad_name])
         routes_json["routes"] = []
-        for train, route_to_val in best_routes.items():
+        for route in best_route_set:
             routes_json["routes"].append([
-                str(train),  # train
-                [str(space.cell) for space in route_to_val[0]],  # route
-                route_to_val[1]  # value
+                str(route.train),
+                [str(space.cell) for space in route],
+                route.value
             ])
     except Exception as exc:
         routes_json["error"] = str(exc)
