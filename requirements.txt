@@ -1,4 +1,4 @@
-routes-1846 == 0.3
+routes-1846 == 0.4.1
 
 Flask == 1.0.2
 Flask-WTF==0.14.2
