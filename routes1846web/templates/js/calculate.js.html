@@ -83,31 +83,33 @@ function calculate() {
         });
 }
 
+
+function railroadRowReady(row) {
+    return !isEmpty(row[0]) &&
+        !isEmpty(getTrains(row)) &&
+        !isEmpty(row[5]) &&
+        (!row[5].includes(chicago) || !isEmpty(row[6]));
+}
+
+function railroadsTableReady() {
+    if (typeof railroadsTableData == 'undefined') {
+        return false;
+    }
+
+    return railroadsTableData.length >= 2 &&
+        railroadsTableData.some(railroadRowReady) &&
+        railroadsTableData.every(row =>
+                row.every(column => isEmpty(column)) ||
+                railroadRowReady(row));
+}
+
 function readyToSelectRailroad() {
-    return placedTilesTableReady() &&
-        railroadsTableReady();
+    return railroadsTableReady();
 }
 
 function readyToCalculate() {
     return readyToSelectRailroad() &&
         railroadSelected();
-}
-
-function placedTilesTableReady() {
-    return placedTilesTableData.length >= 2 &&
-        placedTilesTableData.every((row) => {
-            return row.every(col => !isEmpty(col)) ||
-                   row.every(col => isEmpty(col));
-        });
-}
-
-function railroadsTableReady() {
-    return railroadsTableData.length >= 2 &&
-        railroadsTableData.every(row =>
-                row.every(column => isEmpty(column)) ||
-                    (getTrains(row) !== null &&
-                    !isEmpty(row[5]) &&
-                    (!row[5].includes(chicago) || !isEmpty(row[6]))));
 }
 
 function railroadSelected() {
