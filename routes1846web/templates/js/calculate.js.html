@@ -44,14 +44,14 @@ function requestAndDisplayRoutes(jobId) {
                     } else if ("error" in resultJson) {
                         $("<div />")
                             .css("color", "red")
-                            .text(resultJson["error"])
+                            .text(resultJson["error"]["message"])
                             .appendTo($("#calculate-modal-body"));
                     }
                 }
             }
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
-            alert(textStatus);
+            alert(errorThrown);
         });
 }
 
@@ -79,7 +79,7 @@ function calculate() {
             requestAndDisplayRoutes(resultJson["jobId"]);
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
-            alert(textStatus);
+            alert(errorThrown);
         });
 }
 

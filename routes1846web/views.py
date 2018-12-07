@@ -129,14 +129,25 @@ def calculate():
 @app.route("/calculate/result")
 def calculate_result():
     job_id = request.args.get("jobId")
-    job = CALCULATOR_QUEUE.fetch_job(job_id)
-    if not job:
-        # The job ID couldn't be found, either because it's invalid, or the job was cancelled.
-        return jsonify({})
 
-    if job.is_finished:
-        routes_json = {}
-        try:
+    routes_json = {}
+
+    job = CALCULATOR_QUEUE.fetch_job(job_id)
+    # If job is None, it means the job ID couldn't be found, either because it's invalid, or the job was cancelled.
+    if job:
+        if job.is_failed:
+            # The job experienced an error
+            if not job.exc_info:
+                # The error info hasn't propagated yet, so act as if the job is still in progress
+                routes_json["jobId"] = job_id
+            else:
+                exc_info = json.loads(job.exc_info)
+                routes_json["error"] = {
+                    "message": "An error occurred during route calculation: {}".format(exc_info["message"]),
+                    "traceback": exc_info["traceback"]
+                }
+
+        elif job.is_finished:
             routes_json["routes"] = []
             for route in job.result:
                 routes_json["routes"].append([
@@ -144,16 +155,13 @@ def calculate_result():
                     [str(space.cell) for space in route],
                     route.value
                 ])
-        except Exception as exc:
-            routes_json["error"] = str(exc)
-            traceback.print_exc()
+        else:
+            # The job is in progress
+            routes_json["jobId"] = job_id
 
-        LOG.info("Calculate response: {}".format(routes_json))
+    LOG.info("Calculate response: {}".format(routes_json))
 
-        return jsonify(routes_json)
-    else:
-        # The job is in progress
-        return jsonify({"jobId": job_id})
+    return jsonify(routes_json)
 
 @app.route("/calculate/cancel", methods=["POST"])
 def cancel_calculate_request():
