@@ -7,7 +7,7 @@ import traceback
 from flask import jsonify, render_template, request
 from rq import Queue
 
-from routes1846 import boardstate, boardtile, find_best_routes, railroads, tiles
+from routes1846 import boardstate, boardtile, find_best_routes, railroads, tiles, LOG as LIB_LOG
 from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell, board_cells
 
 from routes1846web.routes1846web import app
@@ -18,6 +18,9 @@ from routes1846web.logger import get_logger, init_logger, set_log_format
 LOG = get_logger("routes1846web")
 init_logger(LOG, "APP_LOG_LEVEL")
 set_log_format(LOG)
+
+init_logger(LIB_LOG, "LIB_LOG_LEVEL", 0)
+set_log_format(LIB_LOG)
 
 CALCULATOR_QUEUE = Queue(connection=redis_conn)
 
