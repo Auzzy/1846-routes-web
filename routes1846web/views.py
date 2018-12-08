@@ -12,9 +12,12 @@ from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell, board_cells
 
 from routes1846web.routes1846web import app
 from routes1846web.calculator import redis_conn
+from routes1846web.logger import get_logger, init_logger, set_log_format
 
 
-LOG = logging.getLogger(__name__)
+LOG = get_logger("routes1846web")
+init_logger(LOG, "APP_LOG_LEVEL")
+set_log_format(LOG)
 
 CALCULATOR_QUEUE = Queue(connection=redis_conn)
 
