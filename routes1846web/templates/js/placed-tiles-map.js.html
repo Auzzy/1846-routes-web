@@ -154,7 +154,13 @@ function populateOrientations(self, coord, tileId) {
                         setOpacity($(self), 1);
                         $("#place-tile-button").prop("disabled", false);
                         $("#place-tile-button").on("click", function() {
-                            placeTile($(self).attr("data-coord"), $(self).attr("data-tile-id"), $(self).attr("data-orientation"));
+                            var coord = $(self).attr("data-coord");
+                            var tileId = $(self).attr("data-tile-id");
+                            var orientation = $(self).attr("data-orientation");
+
+                            placeTile(coord, tileId, orientation);
+                            placeTileOnMap(coord, tileId, orientation);
+
                             $('#tile-selector').modal('hide');
                         });
                     });
@@ -227,5 +233,17 @@ $("#placed-tiles-board-canvas").click(function(event) {
 });
 
 $("#delete-tile-button").click(function(event) {
-    removeTile($(this).attr("data-coord"));
+    var coord = $(this).attr("data-coord");
+
+    removeTile(coord);
+    removeTileFromMap(coord);
+});
+
+$("#placed-tiles-map-tab").on("shown.bs.tab", function(e) {
+    var mapCanvas = $("#placed-tiles-board-canvas").get(0);
+    mapCanvas.getContext('2d').clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+
+    for (rowNum in placedTilesTableData) {
+        placeTileOnMap(placedTilesTableData[rowNum][0], placedTilesTableData[rowNum][1], placedTilesTableData[rowNum][2]);
+    }
 });

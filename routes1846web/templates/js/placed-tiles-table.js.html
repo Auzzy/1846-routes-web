@@ -145,15 +145,6 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
             allowHtml: true
         }
     ],
-    beforeChange: (changes, source) => {
-        if (source !== "map") {
-            changes.forEach(([row, col, oldValue, newValue]) => {
-                if (col === 0 && isEmpty(newValue)) {
-                    removeTileFromMap(placedTilesTableData[row][0]);
-                }
-            });
-        }
-    },
     afterChange: (changes, source) => {
         if (changes !== null) {
             var changesByRow = {};
@@ -166,12 +157,6 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
             });
 
             Object.entries(changesByRow).forEach(([row, rowData]) => {
-                if (placedTilesTableData[row].some(cell => isEmpty(cell))) {
-                    removeTileFromMap(placedTilesTableData[row][0]);
-                } else {
-                    placeTileOnMap(placedTilesTableData[row][0], placedTilesTableData[row][1], placedTilesTableData[row][2]);
-                }
-
                 var changedColumns = Object.keys(rowData);
                 if (changedColumns.includes("0")) {
                     placedTilesTableData[row][1] = changedColumns.includes("1") ? rowData[1] : null;
