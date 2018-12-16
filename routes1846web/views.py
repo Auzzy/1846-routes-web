@@ -7,7 +7,7 @@ import traceback
 from flask import jsonify, render_template, request
 from rq import Queue
 
-from routes1846 import boardstate, boardtile, find_best_routes, railroads, tiles, LOG as LIB_LOG
+from routes1846 import board, boardstate, boardtile, find_best_routes, railroads, tiles, LOG as LIB_LOG
 from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell, board_cells
 
 from routes1846web.routes1846web import app
@@ -67,6 +67,8 @@ PRIVATE_COMPANY_COLUMN_NAMES = ["name", "owner", "token coordinate"]
 
 SEAPORT_COORDS = [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.port_value]
 MEAT_COORDS = [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.meat_value]
+
+_BASE_BOARD = board.Board.load()
 
 _TILE_COORDS = []
 
@@ -202,10 +204,11 @@ def _get_orientations(coord, tile_id):
     orientations = []
     for orientation in range(0, 6):
         try:
-            paths = PlacedTile.get_paths(cell, tile, orientation)
-            orientations.append(orientation)
+            _BASE_BOARD._validate_place_tile_neighbors(cell, tile, orientation)
         except ValueError:
             continue
+
+        orientations.append(orientation)
 
     return orientations
 
