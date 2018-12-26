@@ -1,0 +1,126 @@
+function gatherGeneralIssueData() {
+    return {
+        railroadHeaders: JSON.stringify(railroadsTable.getColHeader()),
+        railroadData: JSON.stringify(railroadsTable.getData()),
+        privateCompaniesHeaders: JSON.stringify(privateCompaniesTable.getColHeader()),
+        privateCompaniesData: JSON.stringify(privateCompaniesTable.getData()),
+        placedTilesHeaders: JSON.stringify(placedTilesTable.getColHeader()),
+        placedTilesData: JSON.stringify(placedTilesTable.getData())
+    };
+}
+
+function gatherCalcIssueData() {
+    var issueData = gatherGeneralIssueData();
+    $.extend(true, issueData, {
+        targetRailroad: $("#railroad-name").val(),
+        jobId: $("#routeModal").data("jobId")
+    });
+    return issueData;
+}
+
+function gatherTileIssueData() {
+    var coord = $("#delete-tile-button").attr("data-coord");
+
+    var tiles = new Array();
+    $("#tile-options > img").each(function(index, tileImage) {
+        tiles.push({
+            tileId: $(tileImage).attr("data-tile-id"),
+            coord: $(tileImage).attr("data-coord"),
+            image: $(tileImage).attr("src")
+        });
+    });
+
+    var orientations = new Array();
+    $("#tile-orientations > img").each(function(index, orientationImage) {
+        orientations.push({
+            orientation: $(orientationImage).attr("data-orientation"),
+            tileId: $(orientationImage).attr("data-tile-id"),
+            coord: $(orientationImage).attr("data-coord"),
+            image: $(orientationImage).attr("src")
+        });
+    });
+
+    return {
+        placedTilesHeaders: JSON.stringify(placedTilesTable.getColHeader()),
+        placedTilesData: JSON.stringify(placedTilesTable.getData()),
+        coord: coord,
+        tiles: JSON.stringify(tiles),
+        orientations: JSON.stringify(orientations),
+        subject: "tile issue"
+    };
+}
+
+function reportIssue(modalName, postData, endpoint) {
+    $(`#${modalName}-status`)
+        .addClass("tiny-spinner")
+        .css("block", "inline")
+        .css("width", "20px")
+        .css("height", "20px");
+
+    postData.email = $(`#${modalName}-user`).val();
+    postData.comments = $(`#${modalName}-text`).val();
+
+    $.post(endpoint, postData)
+        .done(function() {
+            $(`#${modalName}-status`).empty();
+            $(`#${modalName}-status`)
+                .removeClass("tiny-spinner")
+                .css("color", "green")
+                .css("width", "auto")
+                .css("height", "auto")
+                .text("Report submitted");
+        })
+        .fail(function() {
+            $(`#${modalName}-status`).empty();
+            $(`#${modalName}-status`)
+                .removeClass("tiny-spinner")
+                .css("color", "red")
+                .css("width", "auto")
+                .css("height", "auto")
+                .text("Failed to submit your report. Please try again.");
+        });
+}
+
+function reportModal(modalName) {
+    $(`#${modalName}-modal`).on("show.bs.modal", function() {
+        $(`#${modalName}-text`).val("");
+        $(`#${modalName}-user`).val("");
+        $(`#${modalName}-status`).empty();
+        $(`#${modalName}-submit`).prop('disabled', true);
+    });
+
+    $(`#${modalName}-text`).on('input', function() {
+        if ($(`#${modalName}-text`).val().length > 0) {
+            $(`#${modalName}-submit`).prop('disabled', false);
+            $(`#${modalName}-submit`).css("pointer-events", "auto");
+            $(`#${modalName}-submit-wrapper`).tooltip('disable')
+        } else {
+            $(`#${modalName}-submit`).prop('disabled', true);
+            $(`#${modalName}-submit`).css("pointer-events", "none");
+            $(`#${modalName}-submit-wrapper`).tooltip('enable');
+        }
+    });
+}
+
+$("#general-report-issue-submit").click(function() {
+    var reportData = gatherGeneralIssueData();
+    reportData.subject = "general issue";
+    reportIssue("general-report-issue", reportData, "{{ url_for('report_general_issue') }}");
+});
+
+$("#calc-report-issue-submit").click(function() {
+    var reportData = gatherCalcIssueData();
+    reportData.subject = "route calculation issue";
+    reportIssue("calc-report-issue", reportData, "{{ url_for('report_calc_issue') }}");
+});
+
+$("#tile-report-issue-submit").click(function() {
+    var reportData = gatherTileIssueData();
+    reportData.subject = "tile issue";
+    reportIssue("tile-report-issue", reportData, "{{ url_for('report_tile_issue') }}");
+});
+
+
+reportModal("calc-report-issue");
+reportModal("general-report-issue");
+reportModal("tile-report-issue");

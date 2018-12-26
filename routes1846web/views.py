@@ -1,16 +1,18 @@
 import collections
 import json
 import logging
+import os
 import tempfile
 import traceback
 
 from flask import jsonify, render_template, request
+from flask_mail import Message
 from rq import Queue
 
 from routes1846 import board, boardstate, boardtile, find_best_routes, railroads, tiles, LOG as LIB_LOG
 from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell, board_cells
 
-from routes1846web.routes1846web import app
+from routes1846web.routes1846web import app, mail
 from routes1846web.calculator import redis_conn
 from routes1846web.logger import get_logger, init_logger, set_log_format
 
@@ -23,6 +25,8 @@ init_logger(LIB_LOG, "LIB_LOG_LEVEL", 0)
 set_log_format(LIB_LOG)
 
 CALCULATOR_QUEUE = Queue(connection=redis_conn)
+
+MESSAGE_BODY_FORMAT = "User: {user}\nComments:\n{comments}"
 
 CHICAGO_STATION_SIDES = (0, 3, 4, 5)
 CHICAGO_STATION_COORDS = collections.OrderedDict([(str(CHICAGO_CELL.neighbors[side]), side) for side in CHICAGO_STATION_SIDES])
@@ -136,8 +140,13 @@ def calculate():
 
 @app.route("/calculate/result")
 def calculate_result():
-    job_id = request.args.get("jobId")
+    routes_json = _get_calculate_result(request.args.get("jobId"))
 
+    LOG.info("Calculate response: {}".format(routes_json))
+
+    return jsonify(routes_json)
+
+def _get_calculate_result(job_id):
     routes_json = {}
 
     job = CALCULATOR_QUEUE.fetch_job(job_id)
@@ -167,9 +176,7 @@ def calculate_result():
             # The job is in progress
             routes_json["jobId"] = job_id
 
-    LOG.info("Calculate response: {}".format(routes_json))
-
-    return jsonify(routes_json)
+    return routes_json
 
 @app.route("/calculate/cancel", methods=["POST"])
 def cancel_calculate_request():
@@ -343,3 +350,76 @@ def legal_token_coords():
     LOG.info("Legal %s token coordinate response: %s", company_name, coords)
 
     return jsonify({"coords": coords})
+
+
+def _build_general_message():
+    railroad_headers = json.loads(request.form.get("railroadHeaders"))
+    railroads_data = json.loads(request.form.get("railroadData"))
+    private_companies_headers = json.loads(request.form.get("privateCompaniesHeaders"))
+    private_companies_data = json.loads(request.form.get("privateCompaniesData"))
+    placed_tiles_headers = json.loads(request.form.get("placedTilesHeaders"))
+    placed_tiles_data = json.loads(request.form.get("placedTilesData"))
+    user_email = request.form.get("email")
+    user_comments = request.form.get("comments")
+    email_subject = request.form.get("subject")
+
+    railroads_json = [dict(zip(railroad_headers, row)) for row in railroads_data if any(row)]
+    private_companies_json = [dict(zip(private_companies_headers, row)) for row in private_companies_data]
+    placed_tiles_json = [dict(zip(placed_tiles_headers, row)) for row in placed_tiles_data if any(row)]
+
+    msg = Message(
+        body=MESSAGE_BODY_FORMAT.format(user=user_email, comments=user_comments),
+        subject=email_subject,
+        sender=app.config.get("MAIL_USERNAME"),
+        recipients=[os.environ["BUG_REPORT_EMAIL"]])
+
+    msg.attach("railroads.json", "application/json", json.dumps(railroads_json, indent=4, sort_keys=True))
+    msg.attach("private-companies.json", "application/json", json.dumps(private_companies_json, indent=4, sort_keys=True))
+    msg.attach("placed-tiles.json", "application/json", json.dumps(placed_tiles_json, indent=4, sort_keys=True))
+
+    return msg
+
+@app.route("/report/general-issue", methods=["POST"])
+def report_general_issue():
+    mail.send(_build_general_message())
+    return ""
+
+@app.route("/report/calc-issue", methods=["POST"])
+def report_calc_issue():
+    target_railroad = request.form.get("targetRailroad")
+    job_id = request.form.get("jobId")
+
+    msg = _build_general_message()
+
+    routes_json = _get_calculate_result(job_id)
+    msg.attach("routes.json", "application/json", json.dumps({target_railroad: routes_json}, indent=4, sort_keys=True))
+
+    mail.send(msg)
+
+    return ""
+
+@app.route("/report/tile-issue", methods=["POST"])
+def report_tile_issue():
+    placed_tiles_headers = json.loads(request.form.get("placedTilesHeaders"))
+    placed_tiles_data = json.loads(request.form.get("placedTilesData"))
+    coord = request.form.get("coord")
+    tiles_json = json.loads(request.form.get("tiles"))
+    orientations_json = json.loads(request.form.get("orientations"))
+    user_email = request.form.get("email")
+    user_comments = request.form.get("comments")
+    email_subject = request.form.get("subject")
+
+    msg = Message(
+        body=MESSAGE_BODY_FORMAT.format(user=user_email, comments=user_comments),
+        subject=email_subject,
+        sender=app.config.get("MAIL_USERNAME"),
+        recipients=[os.environ["BUG_REPORT_EMAIL"]])
+
+    placed_tiles_json = [dict(zip(placed_tiles_headers, row)) for row in placed_tiles_data if any(row)]
+
+    msg.attach("placed-tiles.json", "application/json", json.dumps(placed_tiles_json, indent=4, sort_keys=True))
+    msg.attach("tiles.json", "application/json", json.dumps(tiles_json, indent=4, sort_keys=True))
+    msg.attach("orientations.json", "application/json", json.dumps(orientations_json, indent=4, sort_keys=True))
+    mail.send(msg)
+
+    return ""

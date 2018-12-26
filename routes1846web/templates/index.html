@@ -15,12 +15,17 @@
     <li>
         <button id="calculate-submit" class="btn btn-success" data-toggle="modal" data-target="#routeModal" style="margin-left:10px;">Calculate</button>
     </li>
+    <li class="ml-auto">
+        <button id="general-report-issue-open" class="btn btn-outline-danger" data-toggle="modal" data-target="#general-report-issue-modal" style="margin-right: 25px;">Report Issue</button>
+    </li>
 </ul>
 
 <div class="tab-content" id="routes-tabs-content" style="margin-left: 50px; margin-top: 30px;">
     <div class="tab-pane fade show active" id="placed-tiles-map-content" role="tabpanel" aria-labelledby="placed-tiles-map-tab">
-        <img id="placed-tiles-board" src="{{ url_for('static', filename='images/1846-Map.png') }}" />
-        <canvas id="placed-tiles-board-canvas"></canvas>
+        <div id="game-board">
+            <img id="placed-tiles-board" src="{{ url_for('static', filename='images/1846-Map.png') }}" />
+            <canvas id="placed-tiles-board-canvas"></canvas>
+        </div>
 
         <div class="modal fade" id="tile-selector" tabindex="-1" role="dialog" aria-labelledby="tileSelectorLabel" aria-hidden="true">
             <div class="modal-dialog modal-sm" role="document">
@@ -41,6 +46,9 @@
                         </div>
                     </div>
                     <div class="modal-footer">
+                        <div class="mr-auto">
+                            <button class="btn btn-outline-danger" data-toggle="modal" data-target="#tile-report-issue-modal">Report Issue</button>
+                        </div>
                         <button type="button" class="btn btn-link" data-dismiss="modal" aria-label="Close">Cancel</button>
                         <button id="place-tile-button" type="button" class="btn btn-primary">Place</button>
                     </div>
@@ -89,11 +97,17 @@
             </div>
             <div id="calculate-modal-body" class="modal-body"></div>
             <div class="modal-footer">
+                <div class="mr-auto">
+                    <button class="btn btn-outline-danger" data-toggle="modal" data-target="#calc-report-issue-modal">Report Issue</button>
+                </div>
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
+
+{% include "report-issue-modals.html" %}
+
 {% endblock %}
 
 {% block js %}
@@ -108,5 +122,6 @@
 
 {% include "js/calculate.js.html" %}
 
+{% include "js/report-issue.js.html" %}
 
 {% endblock %}

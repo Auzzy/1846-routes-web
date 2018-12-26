@@ -23,7 +23,6 @@ function requestAndDisplayRoutes(jobId) {
                 if (resultJson.hasOwnProperty("jobId")) {
                     setTimeout(requestAndDisplayRoutes, 1000, resultJson["jobId"]);
                 } else {
-                    $("#routeModal").removeData("jobId");
                     $("#calculate-modal-body").empty();
                     if ("routes" in resultJson) {
                         $("<ul />")
