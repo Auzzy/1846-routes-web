@@ -265,6 +265,19 @@ $("#delete-tile-button").click(function(event) {
     removeTileFromMap(coord);
 });
 
+$("#tile-selector").on("show.bs.modal", function() {
+    // Hack to get around scrollTop only working on visible elements.
+    $("#tile-selector").css("visibility", "hidden");
+    $("#tile-selector").css("display", "block");
+
+    // Reset scroll bar to the top of the tile list
+    $("#tile-selector-modal-body").scrollTop(0);
+
+    // Reset hack
+    $("#tile-selector").css("display", "none");
+    $("#tile-selector").css("visibility", "visible");
+});
+
 $("#placed-tiles-map-tab").on("shown.bs.tab", function(e) {
     var mapCanvas = $("#placed-tiles-board-canvas").get(0);
     mapCanvas.getContext('2d').clearRect(0, 0, mapCanvas.width, mapCanvas.height);
