@@ -152,6 +152,10 @@ function populateOrientations(self, coord, tileId) {
                         });
 
                         setOpacity($(self), 1);
+
+                        $("#tile-orientations > .active").removeClass("active");
+                        $(self).addClass("active");
+
                         $("#place-tile-button").prop("disabled", false);
                         $("#place-tile-button").on("click", function() {
                             var coord = $(self).attr("data-coord");
@@ -211,6 +215,9 @@ function populateModal(coord) {
                         setOpacity($(self), 1);
 
                         populateOrientations(self, $(self).attr("data-coord"), $(self).attr("data-tile-id"));
+
+                        $("#tile-options > .active").removeClass("active");
+                        $(self).addClass("active");
                     });
               
                 $("#tile-options").append(setOpacity(tileImage, 1));

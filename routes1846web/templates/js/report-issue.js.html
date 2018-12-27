@@ -40,10 +40,15 @@ function gatherTileIssueData() {
         });
     });
 
+    var selectedTileId = $("#tile-options > img.active").attr("data-tile-id");
+    var selectedOrientation = $("#tile-orientations > img.active").attr("data-orientation");
+
     return {
         placedTilesHeaders: JSON.stringify(placedTilesTable.getColHeader()),
         placedTilesData: JSON.stringify(placedTilesTable.getData()),
         coord: coord,
+        tileId: selectedTileId,
+        orientation: selectedOrientation,
         tiles: JSON.stringify(tiles),
         orientations: JSON.stringify(orientations),
         subject: "tile issue"

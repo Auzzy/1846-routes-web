@@ -27,6 +27,7 @@ set_log_format(LIB_LOG)
 CALCULATOR_QUEUE = Queue(connection=redis_conn)
 
 MESSAGE_BODY_FORMAT = "User: {user}\nComments:\n{comments}"
+TILE_MESSAGE_BODY_FORMAT = MESSAGE_BODY_FORMAT + "\nSelected:\n\tcoordinate: {coord}\n\ttile: {tile_id}\n\torientation: {orientation}"
 
 CHICAGO_STATION_SIDES = (0, 3, 4, 5)
 CHICAGO_STATION_COORDS = collections.OrderedDict([(str(CHICAGO_CELL.neighbors[side]), side) for side in CHICAGO_STATION_SIDES])
@@ -403,14 +404,19 @@ def report_tile_issue():
     placed_tiles_headers = json.loads(request.form.get("placedTilesHeaders"))
     placed_tiles_data = json.loads(request.form.get("placedTilesData"))
     coord = request.form.get("coord")
+    tile_id = request.form.get("tileId")
+    orientation = request.form.get("orientation")
     tiles_json = json.loads(request.form.get("tiles"))
     orientations_json = json.loads(request.form.get("orientations"))
     user_email = request.form.get("email")
     user_comments = request.form.get("comments")
     email_subject = request.form.get("subject")
 
+    message_body = TILE_MESSAGE_BODY_FORMAT.format(
+        user=user_email, comments=user_comments, coord=coord, tile_id=tile_id, orientation=orientation)
+
     msg = Message(
-        body=MESSAGE_BODY_FORMAT.format(user=user_email, comments=user_comments),
+        body=message_body,
         subject=email_subject,
         sender=app.config.get("MAIL_USERNAME"),
         recipients=[os.environ["BUG_REPORT_EMAIL"]])
