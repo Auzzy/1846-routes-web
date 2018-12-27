@@ -127,6 +127,9 @@ function populateOrientations(self, coord, tileId) {
         .done(function(result) {
             $("#tile-orientations").empty();
 
+            // Reset the tile orientation viewport
+            $("#tile-orientations").offset({"top": $("#tile-selector-modal-body").offset().top});
+
             for (index in result["legal-orientations"]) {
                 var orientation = result["legal-orientations"][index];
                 var orientationStr = orientation.toString();
@@ -224,6 +227,22 @@ function populateModal(coord) {
             }
         });
 }
+
+$("#tile-selector-modal-body").scroll(function(event) {
+    // Don't let the bottom of the tile orientation list pass the bottom of the modal viewport
+    var viewportBottom = $("#tile-selector-modal-body").offset().top + $("#tile-selector-modal-body").height();
+    var orientationsBottom = $("#tile-orientations").offset().top + $("#tile-orientations").height();
+    if (viewportBottom > orientationsBottom) {
+        $("#tile-orientations").offset({"top": viewportBottom - $("#tile-orientations").height()});
+    }
+
+    // Don't let the top of the tile orientation list pass the top of the modal viewport
+    var viewportTop = $("#tile-selector-modal-body").offset().top;
+    var orientationsTop = $("#tile-orientations").offset().top;
+    if (viewportTop < orientationsTop) {
+        $("#tile-orientations").offset({"top": viewportTop});
+    }
+});
 
 $("#placed-tiles-board-canvas").click(function(event) {
     var posXOnImg = event.pageX - $(this).offset().left;
