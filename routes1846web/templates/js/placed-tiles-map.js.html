@@ -145,6 +145,8 @@ function populateOrientations(self, coord, tileId) {
                     .click(function() {
                         var self = this;
 
+                        // Highlight the orientation as selected. This is both to preserve the old paradigm, and to
+                        // provide some visual cues if a bug occurs.
                         $("#tile-orientations").children().each(function (index, element) {
                             if (element != self) {
                                 setOpacity($(element), .2);
@@ -156,17 +158,15 @@ function populateOrientations(self, coord, tileId) {
                         $("#tile-orientations > .active").removeClass("active");
                         $(self).addClass("active");
 
-                        $("#place-tile-button").prop("disabled", false);
-                        $("#place-tile-button").on("click", function() {
-                            var coord = $(self).attr("data-coord");
-                            var tileId = $(self).attr("data-tile-id");
-                            var orientation = $(self).attr("data-orientation");
+                        // Commit the selection and close the modal
+                        var coord = $(self).attr("data-coord");
+                        var tileId = $(self).attr("data-tile-id");
+                        var orientation = $(self).attr("data-orientation");
 
-                            placeTile(coord, tileId, orientation);
-                            placeTileOnMap(coord, tileId, orientation);
+                        placeTile(coord, tileId, orientation);
+                        placeTileOnMap(coord, tileId, orientation);
 
-                            $('#tile-selector').modal('hide');
-                        });
+                        $('#tile-selector').modal('hide');
                     });
                 
                 $("#tile-orientations").append(setOpacity(tileImage, 1));
