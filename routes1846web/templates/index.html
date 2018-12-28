@@ -7,7 +7,7 @@
         <a class="nav-link active" id="placed-tiles-map-tab" data-toggle="tab" href="#placed-tiles-map-content" role="tab" aria-controls="placed-tiles-map" aria-selected="true">Place Tiles</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" id="placed-tiles-tab" data-toggle="tab" href="#placed-tiles-table-content" role="tab" aria-controls="placed-tiles-table" aria-selected="true">Tile Table</a>
+        <a class="nav-link" id="placed-tiles-tab" data-toggle="tab" href="#placed-tiles-table-content" role="tab" aria-controls="placed-tiles-table" aria-selected="false">Tile Table</a>
     </li>
     <li class="nav-item">
         <a class="nav-link" id="railroads-tab" data-toggle="tab" href="#railroads-content" role="tab" aria-controls="railroads" aria-selected="false">Railroads</a>
@@ -61,21 +61,7 @@
     </div>
     <div class="tab-pane fade" id="railroads-content" role="tabpanel" aria-labelledby="railroads-tab">
         <h4>Railroads</h4>
-        <div style="float: left;" id="railroads-table"></div>
-        <div style="float: left; width: 50px;">&nbsp;</div>
-        <div style="float: left;">
-            <div>
-                <span style="float: left; font-weight: bold;">chicago station side -&nbsp;</span>
-                <div style="float: left; width: 400px;">
-                    <p>
-                        Railroads with a station in Chicago (D6) indicate the coordinate they exit through.
-                    </p>
-                    <p>
-                        For example, the C & WI space is side E7.
-                    </p>
-                </div>
-            </div>
-        </div>
+        <table style="float: left;" id="railroads-table"></table>
         <div style="clear: both;">&nbsp;</div>
         <h5>Private Companies</h5>
         <div style="float: left;" id="private-companies-table"></div>
@@ -106,6 +92,8 @@
 </div>
 
 {% include "report-issue-modals.html" %}
+
+{% include "railroads-table-modals.html" %}
 
 {% endblock %}
 
