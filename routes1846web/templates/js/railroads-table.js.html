@@ -1,3 +1,5 @@
+var chicago = "D6";
+
 function headers() {
     $("#railroads-table")
         .append($("<tr></tr>")
@@ -75,6 +77,42 @@ function addTrainAndStationButtons(rowElement) {
                     .addClass("oi oi-pencil"))));
 }
 
+function chiacgoPopoverListGroup(railroadName, cityItem) {
+    var popoverListGroup = $("<div></div>")
+        .addClass("list-group")
+        .attr("id", "chicago-neighbor-options");
+
+    var currentChicagoNeighbors = $(`#railroads-table tr[data-neighbor][data-railroad!='${railroadName}']`)
+        .map((index, row) => $(row).attr("data-neighbor"))
+        .toArray();
+
+    $.get("{{ url_for('chicago_stations') }}", {stations: JSON.stringify(currentChicagoNeighbors)})
+        .done(function(result) {
+            result["chicago-stations"].forEach(neighbor => {
+                popoverListGroup
+                    .append($("<button></button>")
+                        .addClass("btn btn-sm btn-outline-primary")
+                        .attr("type", "button")
+                        .attr("data-neighbor", neighbor)
+                        .text(neighbor)
+                        .click(function() {
+                            if ($(this).hasClass("active")) {
+                                cityItem.removeAttr("data-neighbor");
+                                cityItem.removeClass("active");
+                                popoverListGroup.children(".active").removeClass("active");
+                            } else {
+                                cityItem.attr("data-neighbor", neighbor);
+                                cityItem.addClass("active");
+                                popoverListGroup.children(".active").removeClass("active");
+                                $(this).addClass("active");
+                            }
+                        }));
+            });
+        });
+
+    return popoverListGroup;
+}
+
 function populateStationsModal(source) {
     $("#stations-modal-list").empty();
 
@@ -82,6 +120,7 @@ function populateStationsModal(source) {
     var stationsDisplay = $(`#railroads-table tr[data-railroad='${railroad}'] td:nth-child(3) .stations`);
     var currentStationsAttr = stationsDisplay.attr("data-stations");
     var currentStations = currentStationsAttr !== undefined ? currentStationsAttr.split(",") : new Array();
+    var currentNeighbor = stationsDisplay.attr("data-neighbor");
 
     $.get("{{ url_for('cities') }}")
         .done(function(result) {
@@ -90,20 +129,75 @@ function populateStationsModal(source) {
                     .addClass("list-group-item list-group-item-action")
                     .attr("type", "button")
                     .attr("data-cell", cell)
-                    .text(cell)
-                    .click(function() {
+                    .text(cell);
+
+                if (cell === chicago) {
+                    var neighborPopoverListGroup = chiacgoPopoverListGroup(railroad, cityItem);
+                    var neighborPopover = cityItem.popover({
+                        placement: "right",
+                        html: true,
+                        title: "station neighbor",
+                        content: neighborPopoverListGroup
+                    });
+
+                    // When the popover is hidden, clear its effects.
+                    $(neighborPopover).on("hide.bs.popover", function() {
+                        $(neighborPopoverListGroup).find(".active").removeClass("active");
+                        cityItem.removeAttr("data-neighbor");
+                    });
+
+                    function updatePopover(event) {
+                        $(neighborPopover).popover('update');
+                        if (currentNeighbor) {
+                            $(neighborPopoverListGroup).find(`[data-neighbor=${currentNeighbor}]`).not(".active").click();
+                        }
+                    }
+
+                    // If the current neighbor has been set, load the popover with it selected.
+                    $(neighborPopover).on("shown.bs.popover", updatePopover);
+
+                    // Detects the end of the modal's transition and repositions the neighbor popover. Without this, the
+                    // popover may appear a bit above the city item due to its creation during the modal's transition.
+                    $("#stations-modal").on("webkitTransitionEnd otransitionend oTransitionEnd msTransitionEnd transitionend", updatePopover);
+
+                    // If the popover is not destroyed, then it becomes detatched from the modal when hidden, and
+                    // reappears elsewhere on the page when the modal is next opened. It also creates a second copy when
+                    // the modal is opened, leading to undefined behavior.
+                    $("#stations-modal").on("hide.bs.modal", function() {
+                        $(neighborPopover).popover('dispose');
+                        $("#stations-modal").off("webkitTransitionEnd otransitionend oTransitionEnd msTransitionEnd transitionend");
+                    });
+
+                    cityItem.click(function() {
+                        if ($(this).hasClass("active")) {
+                            $(neighborPopover).popover("hide");
+                            $(this).removeClass("active");
+                        }
+                    });
+                } else {
+                    cityItem.click(function() {
                         if ($(this).hasClass("active")) {
                             $(this).removeClass("active");
                         } else {
                             $(this).addClass("active");
                         }
+
+                        if ($("#chicago-neighbor-options .active").length === 0) {
+                            $("#chicago-neighbor-options").parents(".popover").popover("hide");
+                        }
                     });
+                }
+
+                $("#stations-modal-list").append(cityItem);
 
                 if (currentStations.includes(cell)) {
-                    cityItem.addClass("active");
+                    // Chicago is the only station which will also activate a popover.
+                    if (cell === chicago) {
+                        $(neighborPopover).popover("show");
+                    } else {
+                        cityItem.addClass("active");
+                    }
                 }
-            
-                $("#stations-modal-list").append(cityItem);
             });
         });
 }
@@ -258,17 +352,39 @@ $("#stations-modal").on("hide.bs.modal", function(event) {
 
 $("#stations-modal-confirm").click(function() {
     var railroad = $("#stations-modal").attr("data-railroad");
-    var stations = $("#stations-modal-list .active").map((index, element) => {
-        return $(element).attr("data-cell");
-    }).get();
+    var stations = $("#stations-modal-list .active").map((index, element) => $(element).attr("data-cell")).toArray();
+    var neighbor = $(`#stations-modal-list .active[data-cell='${chicago}']`).attr("data-neighbor");
     
     var stationsDisplay = $(`#railroads-table tr[data-railroad='${railroad}'] td:nth-child(3) .stations`);
     stationsDisplay.empty();
-    stationsDisplay
-        .attr("data-stations", stations.join(","))
-        .html(stations.join("<br />"));
-    $(`#railroads-table tr[data-railroad='${railroad}']`).attr("data-stations", stationsDisplay.attr("data-stations"));
+
+    var railroadRow = $(`#railroads-table tr[data-railroad='${railroad}']`);
+    if (stations.length) {
+        railroadRow.attr("data-stations", stationsDisplay.attr("data-stations"));
+        stationsDisplay
+            .attr("data-stations", stations.join(","))
+            .html(stations
+                .map(cell => cell + (cell === chicago ? ` (${neighbor})` : ""))
+                .join("<br />"));
+    } else {
+        railroadRow.removeAttr("data-stations");
+        stationsDisplay.removeAttr("data-stations");
+    }
+    if (neighbor) {
+        railroadRow.attr("data-neighbor", stationsDisplay.attr("data-neighbor"));
+        stationsDisplay.attr("data-neighbor", neighbor);
+    } else {
+        railroadRow.removeAttr("data-neighbor");
+        stationsDisplay.removeAttr("data-neighbor");
+    }
+
     $("#stations-modal").modal("hide");
+});
+
+// I am unclear why this button propogates its transitionend event to its parent modal. But as it interferes with the
+// behavior of the station modal (specifically, the special handling of Chicago), the event must be slienced.
+$("#stations-modal-confirm").on("webkitTransitionEnd otransitionend oTransitionEnd msTransitionEnd transitionend", event => {
+    event.stopPropagation();
 });
 
 headers();
