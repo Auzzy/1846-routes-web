@@ -1,6 +1,17 @@
 $("#routeModal").on("show.bs.modal", function () {
     $("#calculate-modal-body").empty();
     $("#railroad-name")[0].selectedIndex = -1;
+
+    $("#railroad-name").empty();
+    $("#railroad-name").append($("<option></option>"));  // Empty, pre-selected option
+
+    var railroadNames = getRailroads();
+    for (index in railroadNames) {
+        $("#railroad-name").append(
+            $("<option></option>")
+                .attr("name", railroadNames[index])
+                .text(railroadNames[index]));
+    }
 });
 
 $('#routeModal').on('hidden.bs.modal', function () {
@@ -67,7 +78,7 @@ function calculate() {
         .appendTo($("#calculate-modal-body"));
 
     var postData = {
-        "railroads-json": JSON.stringify(railroadsTableData.map(row => [row[0], getTrains(row), row[5], row[6]])),
+        "railroads-json": JSON.stringify(getRailroadsAsTable()),
         "private-companies-json": JSON.stringify(privateCompaniesTableData),
         "board-state-json": JSON.stringify(placedTilesTableData),
         "railroad-name": $("#railroad-name").val()
@@ -85,21 +96,16 @@ function calculate() {
 
 function railroadRowReady(row) {
     return !isEmpty(row[0]) &&
-        !isEmpty(getTrains(row)) &&
-        !isEmpty(row[5]) &&
-        (!row[5].includes(chicago) || !isEmpty(row[6]));
+        !isEmpty(row[1]) &&
+        !isEmpty(row[2]) &&
+        (!row[2].includes(chicago) || !isEmpty(row[3]));
 }
 
 function railroadsTableReady() {
-    if (typeof railroadsTableData == 'undefined') {
-        return false;
-    }
+    var railroadsTableData = getRailroadsAsTable();
 
-    return railroadsTableData.length >= 2 &&
-        railroadsTableData.some(railroadRowReady) &&
-        railroadsTableData.every(row =>
-                row.every(column => isEmpty(column)) ||
-                railroadRowReady(row));
+    return railroadsTableData.length >= 1 &&
+        railroadsTableData.every(railroadRowReady);
 }
 
 function readyToSelectRailroad() {
@@ -112,8 +118,7 @@ function readyToCalculate() {
 }
 
 function railroadSelected() {
-    var railroadNames = railroadsTableData.map(railroad => railroad[0]).filter(railroad => !isEmpty(railroad));
-    return railroadNames.includes($("#railroad-name").val());
+    return getRailroads().includes($("#railroad-name").val());
 }
 
 $("#railroad-name").change(function() {

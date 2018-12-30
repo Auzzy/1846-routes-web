@@ -1,5 +1,26 @@
 var chicago = "D6";
 
+function getRailroads() {
+    return $("#railroads-table tr[data-railroad]").map((index, element) => $(element).attr("data-railroad")).toArray();
+}
+
+function getRailroadHeaders() {
+    return $("#railroads-table th").map((index, header) => $(header).text().toLowerCase()).toArray();
+}
+
+function getRailroadsAsTable() {
+    var railroadsTableData = [];
+    $("#railroads-table tr[data-railroad]").each((index, element) => {
+        return railroadsTableData.push([
+            $(element).attr("data-railroad"),
+            $(element).attr("data-trains"),
+            $(element).attr("data-stations"),
+            $(element).attr("data-neighbor")
+        ]);
+    });
+    return railroadsTableData;
+}
+
 function headers() {
     $("#railroads-table")
         .append($("<tr></tr>")
@@ -83,6 +104,7 @@ function addTrainAndStationButtons(rowElement) {
                 .addClass("oi oi-delete"))
                 .click(function() {
                     $(this).parents("tr").remove();
+                    $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
                 }));
 }
 
@@ -295,10 +317,7 @@ function limitTrains() {
 function populateRailroadsDropdown(source) {
     $("#add-railroad-dropdown-list").empty();
 
-    var railroadNames = new Array();
-    $("#railroads-table tr td:nth-child(1)").each((index, element) => railroadNames.push($(element).text()));
-
-    $.get("{{ url_for('legal_railroads') }}", {railroads: JSON.stringify(railroadNames)})
+    $.get("{{ url_for('legal_railroads') }}", {railroads: JSON.stringify(getRailroads())})
         .done(function(result) {
             result["railroads"].forEach(railroad => {
                 $("#add-railroad-dropdown-list")
@@ -347,7 +366,10 @@ $("#trains-modal-confirm").click(function() {
         .attr("data-trains", trains.join(","))
         .html(trains.join("<br />"));
     $(`#railroads-table tr[data-railroad='${railroad}']`).attr("data-trains", trainsDisplay.attr("data-trains"));
+
     $("#trains-modal").modal("hide");
+
+    $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
 });
 
 $("#stations-modal").on("show.bs.modal", function(event) {
@@ -363,31 +385,33 @@ $("#stations-modal-confirm").click(function() {
     var railroad = $("#stations-modal").attr("data-railroad");
     var stations = $("#stations-modal-list .active").map((index, element) => $(element).attr("data-cell")).toArray();
     var neighbor = $(`#stations-modal-list .active[data-cell='${chicago}']`).attr("data-neighbor");
-    
+
     var stationsDisplay = $(`#railroads-table tr[data-railroad='${railroad}'] td:nth-child(3) .stations`);
     stationsDisplay.empty();
 
     var railroadRow = $(`#railroads-table tr[data-railroad='${railroad}']`);
     if (stations.length) {
-        railroadRow.attr("data-stations", stationsDisplay.attr("data-stations"));
         stationsDisplay
             .attr("data-stations", stations.join(","))
             .html(stations
                 .map(cell => cell + (cell === chicago ? ` (${neighbor})` : ""))
                 .join("<br />"));
+        railroadRow.attr("data-stations", stationsDisplay.attr("data-stations"));
     } else {
-        railroadRow.removeAttr("data-stations");
         stationsDisplay.removeAttr("data-stations");
+        railroadRow.removeAttr("data-stations");
     }
     if (neighbor) {
-        railroadRow.attr("data-neighbor", stationsDisplay.attr("data-neighbor"));
         stationsDisplay.attr("data-neighbor", neighbor);
+        railroadRow.attr("data-neighbor", stationsDisplay.attr("data-neighbor"));
     } else {
-        railroadRow.removeAttr("data-neighbor");
         stationsDisplay.removeAttr("data-neighbor");
+        railroadRow.removeAttr("data-neighbor");
     }
 
     $("#stations-modal").modal("hide");
+
+    $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
 });
 
 // I am unclear why this button propogates its transitionend event to its parent modal. But as it interferes with the

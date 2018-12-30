@@ -1,7 +1,19 @@
 function gatherGeneralIssueData() {
+    var railroadsTable = getRailroadsAsTable().map(rowData => {
+        if (rowData.length < 4) {
+            return rowData;
+        }
+
+        return [
+            rowData[0],
+            rowData[1],
+            rowData[2].split(",").map(station => station.trim() + (station.trim() == "D6" ? ` (${rowData[3]})` : "")).join(",")
+        ];
+    });
+
     return {
-        railroadHeaders: JSON.stringify(railroadsTable.getColHeader()),
-        railroadData: JSON.stringify(railroadsTable.getData()),
+        railroadHeaders: JSON.stringify(getRailroadHeaders()),
+        railroadData: JSON.stringify(railroadsTable),
         privateCompaniesHeaders: JSON.stringify(privateCompaniesTable.getColHeader()),
         privateCompaniesData: JSON.stringify(privateCompaniesTable.getData()),
         placedTilesHeaders: JSON.stringify(placedTilesTable.getColHeader()),
