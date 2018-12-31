@@ -74,7 +74,16 @@ function addTrainAndStationButtons(rowElement) {
                 .attr("data-toggle", "modal")
                 .attr("data-target", "#stations-modal")
                 .append($("<span></span>")
-                    .addClass("oi oi-pencil"))));
+                    .addClass("oi oi-pencil"))))
+        .append($("<button></button>")
+            .addClass("btn btn-outline-danger")
+            .css("margin-left", 30)
+            .attr("type", "button")
+            .append($("<span></span>")
+                .addClass("oi oi-delete"))
+                .click(function() {
+                    $(this).parents("tr").remove();
+                }));
 }
 
 function chiacgoPopoverListGroup(railroadName, cityItem) {
