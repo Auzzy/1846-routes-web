@@ -1,12 +1,14 @@
 var legalCoords = {{ tile_coords | safe }};
 
-var mapImage = $("#placed-tiles-board").get(0);
-$("#placed-tiles-board-canvas")
-    .css("position", "absolute")
-    .css("left", mapImage.offsetLeft)
-    .css("top", mapImage.offsetTop)
-    .prop("width", mapImage.width)
-    .prop("height", mapImage.height);
+function repositionTileCanvas() {
+    var mapImage = $("#placed-tiles-board").get(0);
+    $("#placed-tiles-board-canvas")
+        .css("position", "absolute")
+        .css("left", mapImage.offsetLeft)
+        .css("top", mapImage.offsetTop)
+        .prop("width", mapImage.width)
+        .prop("height", mapImage.height);
+}
 
 
 
@@ -279,6 +281,8 @@ $("#tile-selector").on("show.bs.modal", function() {
 });
 
 $("#placed-tiles-map-tab").on("shown.bs.tab", function(e) {
+    repositionTileCanvas();
+
     var mapCanvas = $("#placed-tiles-board-canvas").get(0);
     mapCanvas.getContext('2d').clearRect(0, 0, mapCanvas.width, mapCanvas.height);
 
@@ -286,3 +290,5 @@ $("#placed-tiles-map-tab").on("shown.bs.tab", function(e) {
         placeTileOnMap(placedTilesTableData[rowNum][0], placedTilesTableData[rowNum][1], placedTilesTableData[rowNum][2]);
     }
 });
+
+repositionTileCanvas();
