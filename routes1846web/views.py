@@ -289,7 +289,7 @@ def legal_orientations():
 def legal_railroads():
     LOG.info("Legal railroads request.")
 
-    existing_railroads = {railroad for railroad in json.loads(request.args.get("railroads")) if railroad}
+    existing_railroads = {railroad for railroad in json.loads(request.args.get("railroads", "{}")) if railroad}
 
     legal_railroads = RAILROAD_NAMES - existing_railroads
 
@@ -327,7 +327,7 @@ def cities():
 def chicago_stations():
     LOG.info("Legal Chicago stations request.")
 
-    existing_station_coords = {coord for coord in json.loads(request.args.get("stations")) if coord}
+    existing_station_coords = {coord for coord in json.loads(request.args.get("stations", "{}")) if coord}
 
     legal_stations = list(sorted(set(CHICAGO_STATION_COORDS.keys()) - existing_station_coords))
 

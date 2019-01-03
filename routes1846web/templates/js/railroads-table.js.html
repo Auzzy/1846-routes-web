@@ -21,6 +21,133 @@ function getRailroadsAsTable() {
     return railroadsTableData;
 }
 
+function setRailroadStations(railroadRow, stations, neighbor) {
+    var stationsDisplay = railroadRow.find("td:nth-child(3) .stations");
+    stationsDisplay.empty();
+
+    if (!stations.length) {
+        // No stations, so reset and bail
+        stationsDisplay.removeAttr("data-stations");
+        railroadRow.removeAttr("data-stations");
+        stationsDisplay.removeAttr("data-neighbor");
+        railroadRow.removeAttr("data-neighbor");
+        return;
+    }
+
+    var stationsHtml = stations.map(cell => {
+        return cell + (cell === chicago && neighbor ? ` (${neighbor})` : "");
+    }).join("<br />");
+
+    stationsDisplay
+        .attr("data-stations", stations.join(","))
+        .html(stationsHtml);
+    railroadRow.attr("data-stations", stationsDisplay.attr("data-stations"));
+
+    if (neighbor) {
+        stationsDisplay.attr("data-neighbor", neighbor)
+        railroadRow.attr("data-neighbor", stationsDisplay.attr("data-neighbor"));
+    } else {
+        stationsDisplay.removeAttr("data-neighbor");
+        railroadRow.removeAttr("data-neighbor");
+    }
+}
+
+function setRailroadTrains(railroadRow, trains) {
+    if (!trains.length) {
+        // No trains, so bail
+        return;
+    }
+
+    var trainsDisplay = $(railroadRow).find("td:nth-child(2) .trains");
+    trainsDisplay.empty();
+    trainsDisplay
+        .attr("data-trains", trains.join(","))
+        .html(trains.join("<br />"));
+    $(railroadRow).attr("data-trains", trainsDisplay.attr("data-trains"));
+}
+
+function setRailroadName(railroadRow, railroad) {
+    var nameCell = $(railroadRow).children("td:nth-child(1)");
+    var nameDisplay = nameCell.children(".railroad");
+
+    nameCell.children("div.dropdown").remove();
+    nameDisplay.empty();
+    nameDisplay.text(railroad);
+    railroadRow.attr("data-railroad", railroad);
+}
+
+function importRailroads(importText) {
+    return $.when(
+        $.get("{{ url_for('legal_railroads') }}"),
+        $.get("{{ url_for('trains') }}"),
+        $.get("{{ url_for('cities') }}"),
+        $.get("{{ url_for('chicago_stations') }}")
+    ).then((railroadsResponse, trainsResponse, citiesResponse, chicagoNeighborsResponse) => {
+        var legalRailroads = railroadsResponse[0]["railroads"];
+        var legalTrains = trainsResponse[0]["trains"].map(train => train.split("/").map(val => val.trim()).join(" / "));
+        var legalStations = citiesResponse[0]["cities"];
+        var legalChicagoNeighbors = chicagoNeighborsResponse[0]["chicago-stations"];
+
+        var chicagoNeighbors = [];
+        var importTableData = [];
+        importText.trim().split("\n").forEach(row => {
+            var rowData = row.split(";").map(cell => cell.trim().split(",").map(value => value.trim()).filter(value => !isEmpty(value)));
+            // Ensure rowData always consists of 4 values
+            rowData = rowData.concat(new Array(4 - rowData.length).fill([]));
+
+            // normalize train values
+            rowData[1] = rowData[1].map(train => train.split("/").map(val => val.trim()).join(" / "));
+            // remove duplicates
+            rowData[2] = [...new Set(rowData[2])];
+
+            if (legalRailroads.includes(rowData[0][0])
+                    && rowData[1].every(train => legalTrains.includes(train))
+                    && rowData[2].every(station => legalStations.includes(station))
+                    && ((!rowData[2].includes(chicago) && isEmpty(rowData[3][0]))
+                        || (rowData[2].includes(chicago) && legalChicagoNeighbors.includes(rowData[3][0])))) {
+                if (rowData[1].length <= 4 && (isEmpty(rowData[3]) || !chicagoNeighbors.includes(rowData[3]))) {
+                    if (!isEmpty(rowData[3])) {
+                        chicagoNeighbors.push(rowData[3]);
+                    }
+                    importTableData.push(rowData);
+                }
+            }
+        });
+
+        return importTableData;
+    }).then(importTableData => {
+        importTableData.forEach(rowData => {
+            var railroadName = rowData[0][0];
+            var tableRow = $(`#railroads-table tr[data-railroad='${railroadName}']`);
+            if (tableRow.length === 0) {
+                tableRow = $("#railroads-table tr").last();
+
+                // If no railroad by this name is selected, it's a new row whose name must be set. Otherwise, the name is already set.
+                setRailroadName(tableRow, railroadName);
+
+                addTrainAndStationButtons(tableRow);
+                newRow();
+            }
+
+            setRailroadTrains(tableRow, rowData[1]);
+            setRailroadStations(tableRow, rowData[2], rowData[3][0]);
+        });
+
+        // Delete railroads which are in the table but not the import block
+        getRailroads()
+            .filter(railroad => !importTableData.map(row => row[0][0]).includes(railroad))
+            .forEach(railroad => {
+                $(`#railroads-table tr[data-railroad='${railroad}']`).remove()
+            });
+
+        $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
+    });
+}
+
+function prepareRailroadsForExport() {
+    return getRailroadsAsTable().map(row => row.map(cell => cell === undefined ? "" : cell.split(",").join(", ")).join("; ")).join("\n");
+}
+
 function headers() {
     $("#railroads-table")
         .append($("<tr></tr>")
@@ -41,6 +168,8 @@ function newRow() {
         .append($("<tr></tr>")
             .append($("<td></td>")
                 .css("width", 175)
+                .append($("<div></div>")
+                    .addClass("railroad"))
                 .append($("<div></div>")
                     .addClass("dropdown")
                     .attr("id", "add-railroad-dropdown")
@@ -327,15 +456,11 @@ function populateRailroadsDropdown(source) {
                         .attr("href", "#")
                         .text(railroad)
                         .click(function() {
-                            var self = $(this);
-                            var nameCell = $(source).parents("td");
+                            var nameRow = $(source).parents("tr");
 
-                            nameCell.empty();
-                            nameCell.append($("<p></p>").text(self.attr("data-railroad")));
-                            nameCell.parent("tr").attr("data-railroad", self.attr("data-railroad"));
-                            $("#add-railroad-dropdown").dropdown("toggle");
+                            setRailroadName(nameRow, $(this).attr("data-railroad"));
 
-                            addTrainAndStationButtons(nameCell.parent("tr"));
+                            addTrainAndStationButtons(nameRow);
                             newRow();
                         })
                     );
@@ -360,12 +485,7 @@ $("#trains-modal-confirm").click(function() {
     }).get();
 
     var railroad = $("#trains-modal").attr("data-railroad");
-    var trainsDisplay = $(`#railroads-table tr[data-railroad='${railroad}'] td:nth-child(2) .trains`);
-    trainsDisplay.empty();
-    trainsDisplay
-        .attr("data-trains", trains.join(","))
-        .html(trains.join("<br />"));
-    $(`#railroads-table tr[data-railroad='${railroad}']`).attr("data-trains", trainsDisplay.attr("data-trains"));
+    setRailroadTrains($(`#railroads-table tr[data-railroad='${railroad}']`), trains);
 
     $("#trains-modal").modal("hide");
 
@@ -386,32 +506,32 @@ $("#stations-modal-confirm").click(function() {
     var stations = $("#stations-modal-list .active").map((index, element) => $(element).attr("data-cell")).toArray();
     var neighbor = $(`#stations-modal-list .active[data-cell='${chicago}']`).attr("data-neighbor");
 
-    var stationsDisplay = $(`#railroads-table tr[data-railroad='${railroad}'] td:nth-child(3) .stations`);
-    stationsDisplay.empty();
-
-    var railroadRow = $(`#railroads-table tr[data-railroad='${railroad}']`);
-    if (stations.length) {
-        stationsDisplay
-            .attr("data-stations", stations.join(","))
-            .html(stations
-                .map(cell => cell + (cell === chicago ? ` (${neighbor})` : ""))
-                .join("<br />"));
-        railroadRow.attr("data-stations", stationsDisplay.attr("data-stations"));
-    } else {
-        stationsDisplay.removeAttr("data-stations");
-        railroadRow.removeAttr("data-stations");
-    }
-    if (neighbor) {
-        stationsDisplay.attr("data-neighbor", neighbor);
-        railroadRow.attr("data-neighbor", stationsDisplay.attr("data-neighbor"));
-    } else {
-        stationsDisplay.removeAttr("data-neighbor");
-        railroadRow.removeAttr("data-neighbor");
-    }
+    setRailroadStations($(`#railroads-table tr[data-railroad='${railroad}']`), stations, neighbor);
 
     $("#stations-modal").modal("hide");
 
     $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
+});
+
+$("#railroads-import-save").click(function() {
+    $("#railroads-import-save").attr("disabled", true);
+    $("#railroads-import-export-textarea").attr("readonly", true);
+
+    importRailroads($("#railroads-import-export-textarea").val())
+        .done(() => {
+            $("#railroads-import-export-modal").modal("hide");
+        });
+});
+
+$("#railroads-import-export-modal").on("show.bs.modal", function() {
+    $("#railroads-import-save").attr("disabled", true);
+    $("#railroads-import-export-textarea").attr("readonly", true);
+
+    var railroadsTableAsText = prepareRailroadsForExport();
+    $("#railroads-import-export-textarea").val(railroadsTableAsText);
+
+    $("#railroads-import-save").attr("disabled", false);
+    $("#railroads-import-export-textarea").attr("readonly", false);
 });
 
 // I am unclear why this button propogates its transitionend event to its parent modal. But as it interferes with the
