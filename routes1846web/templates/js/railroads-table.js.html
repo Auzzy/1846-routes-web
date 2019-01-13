@@ -237,10 +237,21 @@ function addTrainAndStationButtons(rowElement) {
                 }));
 }
 
+function enableSubmitViaKeyboard(modal, submitButton) {
+    $(modal).keydown(function(event) {
+        if (event.key === "Enter" && event.ctrlKey) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            $(submitButton).click();
+        }
+    });
+}
+
 function chiacgoPopoverListGroup(railroadName, cityItem) {
     var popoverListGroup = $("<div></div>")
         .addClass("list-group")
-        .attr("id", "chicago-neighbor-options");
+        .attr("id", "chicago-neighbor-options")
+        .attr("tabindex", "-1");
 
     var currentChicagoNeighbors = $(`#railroads-table tr[data-neighbor][data-railroad!='${railroadName}']`)
         .map((index, row) => $(row).attr("data-neighbor"))
@@ -248,12 +259,13 @@ function chiacgoPopoverListGroup(railroadName, cityItem) {
 
     $.get("{{ url_for('chicago_stations') }}", {stations: JSON.stringify(currentChicagoNeighbors)})
         .done(function(result) {
-            result["chicago-stations"].forEach(neighbor => {
+            result["chicago-stations"].forEach((neighbor, index) => {
                 popoverListGroup
                     .append($("<button></button>")
                         .addClass("btn btn-sm btn-outline-primary")
                         .attr("type", "button")
                         .attr("data-neighbor", neighbor)
+                        .attr("tabindex", "-1")
                         .text(neighbor)
                         .click(function() {
                             if ($(this).hasClass("active")) {
@@ -265,6 +277,26 @@ function chiacgoPopoverListGroup(railroadName, cityItem) {
                                 cityItem.addClass("active");
                                 popoverListGroup.children(".active").removeClass("active");
                                 $(this).addClass("active");
+                            }
+                        })
+                        .keydown(function(event) {
+                            if (event.key === "Tab") {
+                                event.stopImmediatePropagation();
+                                event.preventDefault();
+
+                                if (event.shiftKey) {
+                                    if (index === 0) {
+                                        cityItem.prev().focus();
+                                    } else {
+                                        $(this).prev().focus();
+                                    }
+                                } else {
+                                    if (index === result["chicago-stations"].length - 1) {
+                                        cityItem.next().focus();
+                                    } else {
+                                        $(this).next().focus();
+                                    }
+                                }
                             }
                         }));
             });
@@ -297,7 +329,8 @@ function populateStationsModal(source) {
                         placement: "right",
                         html: true,
                         title: "station neighbor",
-                        content: neighborPopoverListGroup
+                        content: neighborPopoverListGroup,
+                        container: $("#stations-modal")
                     });
 
                     // When the popover is hidden, clear its effects.
@@ -318,20 +351,46 @@ function populateStationsModal(source) {
 
                     // Detects the end of the modal's transition and repositions the neighbor popover. Without this, the
                     // popover may appear a bit above the city item due to its creation during the modal's transition.
-                    $("#stations-modal").on("webkitTransitionEnd otransitionend oTransitionEnd msTransitionEnd transitionend", updatePopover);
+                    $("#stations-modal").on("webkitTransitionEnd otransitionend oTransitionEnd msTransitionEnd transitionend", function(event) {
+                        // jQuery bubbles events on children of the bound element up to the parent. And for some reason,
+                        // .off() and .stopImmediatePropogation() aren't doing anything. I only want to update the popover
+                        // when the modal itself is done transitioning, so this is workaround.
+                        if ($(event.target).hasClass("modal") || $(event.target).hasClass("modal-dialog")) {
+                            updatePopover(event);
+                        }
+                    });
 
                     // If the popover is not destroyed, then it becomes detatched from the modal when hidden, and
                     // reappears elsewhere on the page when the modal is next opened. It also creates a second copy when
                     // the modal is opened, leading to undefined behavior.
                     $("#stations-modal").on("hide.bs.modal", function() {
                         $(neighborPopover).popover('dispose');
-                        $("#stations-modal").off("webkitTransitionEnd otransitionend oTransitionEnd msTransitionEnd transitionend");
                     });
 
                     cityItem.click(function() {
                         if ($(this).hasClass("active")) {
                             $(neighborPopover).popover("hide");
                             $(this).removeClass("active");
+                        }
+                    });
+
+                    // Handle tabbing to the Chicago station popover in the expected order
+                    cityItem.keydown(event => {
+                        if (event.key === "Tab") {
+                            // If the popover isn't viisble, it makes no sense to focus on it (and indeed, it cannot
+                            // become focused). So kick out of this and let the normal TAB behavior occur.
+                            if (!$(neighborPopoverListGroup).is(":visible")) {
+                                return;
+                            }
+
+                            event.stopImmediatePropagation();
+                            event.preventDefault();
+
+                            if (event.shiftKey) {
+                                $(neighborPopoverListGroup).children().last().focus();
+                            } else {
+                                $(neighborPopoverListGroup).children().first().focus();
+                            }
                         }
                     });
                 } else {
@@ -360,6 +419,8 @@ function populateStationsModal(source) {
                 }
             });
         });
+
+    enableSubmitViaKeyboard($("#stations-modal"), $("#stations-modal-confirm"));
 }
 
 function populateTrainsModal(source) {
@@ -423,6 +484,7 @@ function populateTrainsModal(source) {
             });
             limitTrains();
         });
+    enableSubmitViaKeyboard($("#trains-modal"), $("#trains-modal-confirm"));
 }
 
 function limitTrains() {
@@ -462,6 +524,8 @@ function populateRailroadsDropdown(source) {
 
                             addTrainAndStationButtons(nameRow);
                             newRow();
+
+                            $(nameRow).find(".trains ~ button").focus();
                         })
                     );
             });
@@ -532,6 +596,8 @@ $("#railroads-import-export-modal").on("show.bs.modal", function() {
 
     $("#railroads-import-save").attr("disabled", false);
     $("#railroads-import-export-textarea").attr("readonly", false);
+
+    enableSubmitViaKeyboard($("#railroads-import-export-modal"), $("#railroads-import-save"));
 });
 
 // I am unclear why this button propogates its transitionend event to its parent modal. But as it interferes with the

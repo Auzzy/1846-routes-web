@@ -104,6 +104,8 @@ function reportModal(modalName) {
         $(`#${modalName}-user`).val("");
         $(`#${modalName}-status`).empty();
         $(`#${modalName}-submit`).prop('disabled', true);
+
+        enableSubmitViaKeyboard($(`#${modalName}-modal`), $(`#${modalName}-submit`));
     });
 
     $(`#${modalName}-text`).on('input', function() {
