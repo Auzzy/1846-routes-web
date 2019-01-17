@@ -11,8 +11,12 @@ function loadFromLocalStoragePlacedTiles() {
             placedTilesTableStored.forEach((row, rowNum) => {
                 placedTilesTableData.splice(rowNum, 0, row);
                 validateTileCoord(rowNum, row[0]);
-                validateTileId(rowNum, row[0], row[1]);
-                validateOrientation(rowNum, row[0], row[1], row[2]);
+                if (!isEmpty(row[1])) {
+                    validateTileId(rowNum, row[0], row[1]);
+                    if (!isEmpty(row[2])) {
+                        validateOrientation(rowNum, row[0], row[1], row[2]);
+                    }
+                }
                 addPlacedTileTableSources(rowNum);
                 placedTilesTable.setCellMeta(row, 1, "editor", isEmpty(row[0]) ? false : TileEditor);
                 placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(row[1]) ? false : OrientationEditor);
