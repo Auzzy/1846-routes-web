@@ -76,6 +76,20 @@ function setRailroadName(railroadRow, railroad) {
     railroadRow.attr("data-railroad", railroad);
 }
 
+function updateLocalStorageRailroads() {
+    if (typeof(Storage) !== "undefined") {
+        localStorage.railroadsTable = JSON.stringify(getRailroadsAsTable());
+    }
+}
+
+function loadFromLocalStorageRailroads() {
+    if (typeof(Storage) !== "undefined") {
+        if (localStorage.railroadsTable !== undefined) {
+            importRailroads(prepareRailroadsForExport(JSON.parse(localStorage.railroadsTable)));
+        }
+    }
+}
+
 function importRailroads(importText) {
     return $.when(
         $.get("{{ url_for('legal_railroads') }}"),
@@ -144,8 +158,9 @@ function importRailroads(importText) {
     });
 }
 
-function prepareRailroadsForExport() {
-    return getRailroadsAsTable().map(row => row.map(cell => cell === undefined ? "" : cell.split(",").join(", ")).join("; ")).join("\n");
+function prepareRailroadsForExport(railroadsTable) {
+    railroadsTable = railroadsTable === undefined ? getRailroadsAsTable() : railroadsTable;
+    return railroadsTable.map(row => row.map(cell => isEmpty(cell) ? "" : cell.split(",").join(", ")).join("; ")).join("\n");
 }
 
 function headers() {
@@ -234,6 +249,8 @@ function addTrainAndStationButtons(rowElement) {
                 .click(function() {
                     $(this).parents("tr").remove();
                     $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
+
+                    updateLocalStorageRailroads();
                 }));
 }
 
@@ -526,6 +543,8 @@ function populateRailroadsDropdown(source) {
                             newRow();
 
                             $(nameRow).find(".trains ~ button").focus();
+
+                            updateLocalStorageRailroads();
                         })
                     );
             });
@@ -554,6 +573,8 @@ $("#trains-modal-confirm").click(function() {
     $("#trains-modal").modal("hide");
 
     $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
+
+    updateLocalStorageRailroads();
 });
 
 $("#stations-modal").on("show.bs.modal", function(event) {
@@ -575,6 +596,8 @@ $("#stations-modal-confirm").click(function() {
     $("#stations-modal").modal("hide");
 
     $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
+
+    updateLocalStorageRailroads();
 });
 
 $("#railroads-import-save").click(function() {
@@ -583,6 +606,7 @@ $("#railroads-import-save").click(function() {
 
     importRailroads($("#railroads-import-export-textarea").val())
         .done(() => {
+            updateLocalStorageRailroads();
             $("#railroads-import-export-modal").modal("hide");
         });
 });
@@ -608,3 +632,5 @@ $("#stations-modal-confirm").on("webkitTransitionEnd otransitionend oTransitionE
 
 headers();
 newRow();
+
+loadFromLocalStorageRailroads();

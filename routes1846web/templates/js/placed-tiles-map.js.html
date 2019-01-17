@@ -1,5 +1,18 @@
 var legalCoords = {{ tile_coords | safe }};
 
+function drawMap() {
+    if (placedTilesTable !== undefined) {
+        repositionTileCanvas();
+
+        var mapCanvas = $("#placed-tiles-board-canvas").get(0);
+        mapCanvas.getContext('2d').clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+
+        for (rowNum in placedTilesTable.getData()) {
+            placeTileOnMap(placedTilesTable.getDataAtCell(rowNum, 0), placedTilesTable.getDataAtCell(rowNum, 1), placedTilesTable.getDataAtCell(rowNum, 2));
+        }
+    }
+}
+
 function repositionTileCanvas() {
     var mapImage = $("#placed-tiles-board").get(0);
     $("#placed-tiles-board-canvas")
@@ -10,9 +23,11 @@ function repositionTileCanvas() {
         .prop("height", mapImage.height);
 }
 
-
-
 function drawTileOnMap(coord, tileId, orientation) {
+    function drawTile(context, tileImage, tileOrigin, mapImg) {
+        context.drawImage(tileImage, tileOrigin.x, tileOrigin.y, mapImg.width * 0.088, mapImg.height * 0.121);
+    }
+
     // Ensure we only draw if all 3 requirements are provided.
     if (isEmpty(coord) || isEmpty(tileId) || isEmpty(orientation)) {
         return;
@@ -20,6 +35,7 @@ function drawTileOnMap(coord, tileId, orientation) {
 
     var mapImg = $("#placed-tiles-board").get(0);
     var mapCanvas = $("#placed-tiles-board-canvas").get(0);
+    var context = mapCanvas.getContext('2d');
 
     var rowAndCol = coordToRowAndCol(coord);
     var tileOrigin = getTileTopLeft(mapCanvas, rowAndCol.row, rowAndCol.col);
@@ -27,12 +43,17 @@ function drawTileOnMap(coord, tileId, orientation) {
     var orientationStr = orientation.toString();
     var tileIdStr = tileId.toString().padStart(3, "0");
     var imgSrc = `{{ url_for('static', filename='images') }}/${tileIdStr}-${orientationStr}.png`;
-    
+
     var tileImage = new Image();
     tileImage.src = imgSrc;
 
-    var context = mapCanvas.getContext('2d');
-    context.drawImage(tileImage, tileOrigin.x, tileOrigin.y, mapImg.width * 0.088, mapImg.height * 0.121);
+    // Draws the tile after it's loaded...
+    $(tileImage).one("load", function() {
+        drawTile(context, tileImage, tileOrigin, mapImg);
+    });
+
+    // ...as well as if it was already loaded
+    drawTile(context, tileImage, tileOrigin, mapImg);
 }
 
 function placeTileOnMap(coord, tileId, orientation) {
@@ -283,12 +304,6 @@ $("#tile-selector").on("show.bs.modal", function() {
 $("#placed-tiles-map-tab").on("shown.bs.tab", function(e) {
     repositionTileCanvas();
 
-    var mapCanvas = $("#placed-tiles-board-canvas").get(0);
-    mapCanvas.getContext('2d').clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-
-    for (rowNum in placedTilesTableData) {
-        placeTileOnMap(placedTilesTableData[rowNum][0], placedTilesTableData[rowNum][1], placedTilesTableData[rowNum][2]);
-    }
-});
+$("#placed-tiles-map-tab").on("shown.bs.tab", drawMap);
 
 repositionTileCanvas();
