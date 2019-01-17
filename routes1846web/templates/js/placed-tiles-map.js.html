@@ -301,9 +301,17 @@ $("#tile-selector").on("show.bs.modal", function() {
     $("#tile-selector").css("visibility", "visible");
 });
 
-$("#placed-tiles-map-tab").on("shown.bs.tab", function(e) {
-    repositionTileCanvas();
+$("#confirm-clear-map-modal-confirm").click(function() {
+    placedTilesTable.alter("remove_row", 0, placedTilesTable.countRows() - 1);
+    addPlacedTileTableSources(0);
+    drawMap();
+    updateLocalStoragePlacedTiles();
+});
 
 $("#placed-tiles-map-tab").on("shown.bs.tab", drawMap);
+
+$("#game-board-controls")
+    .attr("width", $("#placed-tiles-board").get(0).clientWidth)
+    .css("text-align", "center");
 
 repositionTileCanvas();
