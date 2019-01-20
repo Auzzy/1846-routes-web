@@ -53,17 +53,20 @@ function setRailroadStations(railroadRow, stations, neighbor) {
 }
 
 function setRailroadTrains(railroadRow, trains) {
+    var trainsDisplay = railroadRow.find("td:nth-child(2) .trains");
+    trainsDisplay.empty();
+
     if (!trains.length) {
-        // No trains, so bail
+        // No trains, so reset and bail
+        trainsDisplay.removeAttr("data-trains");
+        railroadRow.removeAttr("data-trains");
         return;
     }
 
-    var trainsDisplay = $(railroadRow).find("td:nth-child(2) .trains");
-    trainsDisplay.empty();
     trainsDisplay
         .attr("data-trains", trains.join(","))
         .html(trains.join("<br />"));
-    $(railroadRow).attr("data-trains", trainsDisplay.attr("data-trains"));
+    railroadRow.attr("data-trains", trainsDisplay.attr("data-trains"));
 }
 
 function setRailroadName(railroadRow, railroad) {
