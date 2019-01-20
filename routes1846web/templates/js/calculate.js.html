@@ -17,13 +17,15 @@ $("#routeModal").on("show.bs.modal", function () {
     }
 });
 
-$('#routeModal').on('hidden.bs.modal', function () {
-    var jobId = $("#routeModal").data("jobId");
+function cancelCurrentJob() {
+    var jobId = $("#routeModal").attr("data-job-id");
     if (jobId !== undefined) {
         $.post("{{ url_for('cancel_calculate_request') }}", {jobId: jobId});
-        $("#routeModal").removeData("jobId");
+        $("#routeModal").removeAttr("data-job-id");
     }
-});
+}
+
+$('#routeModal').on('hidden.bs.modal', cancelCurrentJob);
 
 function getTrains(row) {
     var trainCells = row.slice(1, 5).filter(train => !isEmpty(train));
@@ -73,6 +75,9 @@ function calculate() {
         return;
     }
 
+    cancelCurrentJob();
+    $("#calculate-modal-body").empty();
+
     $("<div />")
         .addClass("spinner")
         .css("width", "50px")
@@ -88,7 +93,7 @@ function calculate() {
     }
     $.post("{{ url_for('calculate') }}", postData)
         .done(function(resultJson) {
-            $("#routeModal").data("jobId", resultJson["jobId"]);
+            $("#routeModal").attr("data-job-id", resultJson["jobId"]);
             requestAndDisplayRoutes(resultJson["jobId"]);
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
