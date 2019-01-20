@@ -5,12 +5,15 @@ $("#routeModal").on("show.bs.modal", function () {
     $("#railroad-name").empty();
     $("#railroad-name").append($("<option></option>"));  // Empty, pre-selected option
 
-    var railroadNames = getRailroads();
-    for (index in railroadNames) {
-        $("#railroad-name").append(
-            $("<option></option>")
-                .attr("name", railroadNames[index])
-                .text(railroadNames[index]));
+    var railroadsTable = getRailroadsAsTable();
+    for (index in railroadsTable) {
+        var row = railroadsTable[index];
+        if (railroadRowReady(row)) {
+            $("#railroad-name").append(
+                $("<option></option>")
+                    .attr("name", row[0])
+                    .text(row[0]));
+        }
     }
 });
 
@@ -105,7 +108,7 @@ function railroadsTableReady() {
     var railroadsTableData = getRailroadsAsTable();
 
     return railroadsTableData.length >= 1 &&
-        railroadsTableData.every(railroadRowReady);
+        railroadsTableData.some(railroadRowReady);
 }
 
 function readyToSelectRailroad() {
