@@ -1,24 +1,10 @@
-function updateLocalStoragePrivateCompanies() {
-    if (typeof(Storage) !== "undefined") {
-        localStorage.privateCompaniesTable = JSON.stringify(privateCompaniesTable.getData());
-    }
-}
-
-function loadFromLocalStoragePrivateCompanies() {
-    if (typeof(Storage) !== "undefined") {
-        if (localStorage.privateCompaniesTable !== undefined) {
-            privateCompaniesTable.loadData(JSON.parse(localStorage.privateCompaniesTable));
-        }
-    }
-}
-
 function privateCompanyOwnerSource(query, process) {
     process(getRailroads());
 }
 
 function tokenCoordSource(row) {
     return function(query, process) {
-        $.get("{{ url_for('legal_token_coords') }}", {companyName: privateCompaniesTable.getDataAtCell(row, 0)})
+        $.get("{{ url_for('legal_token_coords') }}", {companyName: privateCompaniesTableData[row][0]})
             .done(function(result) {
                 process(result["coords"]);
             });
@@ -81,8 +67,6 @@ var privateCompaniesTable = new Handsontable(document.getElementById("private-co
                 }
             });
             privateCompaniesTable.render();
-
-            updateLocalStoragePrivateCompanies();
         }
     }
 });
@@ -91,5 +75,3 @@ var privateCompaniesTable = new Handsontable(document.getElementById("private-co
 $("#railroads-tab").on("shown.bs.tab", function(e) {
     privateCompaniesTable.render();
 });
-
-loadFromLocalStoragePrivateCompanies();

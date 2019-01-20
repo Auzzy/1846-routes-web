@@ -1,22 +1,5 @@
-function updateLocalStoragePlacedTiles() {
-    if (typeof(Storage) !== "undefined") {
-        localStorage.placedTilesTable = JSON.stringify(placedTilesTable.getData());
-    }
-}
-
-function loadFromLocalStoragePlacedTiles() {
-    if (typeof(Storage) !== "undefined") {
-        if (localStorage.placedTilesTable !== undefined) {
-            placedTilesTableStored = JSON.parse(localStorage.placedTilesTable);
-            placedTilesTable.loadData(placedTilesTableStored);
-            // Need to add sources to the initial row, since it doesn't trigger afterCreateRow
-            addPlacedTileTableSources(placedTilesTableStored.length - 1);
-        }
-    }
-}
-
 function findNextEmptyRow() {
-    for (row = 0; row < placedTilesTable.getData().length; row++) {
+    for (row = 0; row < placedTilesTableData.length; row++) {
         if (placedTilesTable.isEmptyRow(row)) {
             return row;
         }
@@ -24,8 +7,8 @@ function findNextEmptyRow() {
 }
 
 function findRowByCoord(coord) {
-    for (row = 0; row < placedTilesTable.getData().length; row++) {
-        if (placedTilesTable.getDataAtCell(row, 0) === coord) {
+    for (row = 0; row < placedTilesTableData.length; row++) {
+        if (placedTilesTableData[row][0] === coord) {
             return row;
         }
     }
@@ -33,7 +16,7 @@ function findRowByCoord(coord) {
 }
 
 function placeTile(coord, tileId, orientation, source) {
-    var newRow = placedTilesTable.getData().every(row =>
+    var newRow = placedTilesTableData.every(row =>
         row[0] !== coord || row[1] !== tileId || row[2] !== orientation
     );
 
@@ -69,7 +52,7 @@ function removeTile(coord, source) {
 
 function tileCoordsSourceFromCoord(coord) {
     return function (query, process) {
-        var tileCoords = placedTilesTable.getData().map(row => row[0]);
+        var tileCoords = placedTilesTableData.map(row => row[0]);
         $.get("{{ url_for('legal_tile_coords') }}", {coord: coord, tile_coords: JSON.stringify(tileCoords)})
             .done(function(result) {
                 process(result["tile-coords"]);
@@ -79,7 +62,7 @@ function tileCoordsSourceFromCoord(coord) {
 
 function tileCoordsSource(row) {
     return function(query, process) {
-        var source = tileCoordsSourceFromCoord(placedTilesTable.getDataAtCell(row, 0));
+        var source = tileCoordsSourceFromCoord(placedTilesTableData[row][0]);
         source(query, process);
     }
 }
@@ -95,7 +78,7 @@ function tileIdSourceFromCoord(coord) {
 
 function tileIdSource(row) {
     return function(query, process) {
-        var source = tileIdSourceFromCoord(placedTilesTable.getDataAtCell(row, 0));
+        var source = tileIdSourceFromCoord(placedTilesTableData[row][0]);
         source(query, process);
     }
 }
@@ -111,7 +94,7 @@ function orientationSourceFromCoord(coord, tileId) {
 
 function orientationSource(row) {
     return function(query, process) {
-        var source = orientationSourceFromCoord(placedTilesTable.getDataAtCell(row, 0), placedTilesTable.getDataAtCell(row, 1));
+        var source = orientationSourceFromCoord(placedTilesTableData[row][0], placedTilesTableData[row][1]);
         source(query, process);
     }
 }
@@ -173,27 +156,22 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
                 changesByRow[row][change[1]] = change[3];
             });
 
-
             Object.entries(changesByRow).forEach(([row, rowData]) => {
-                if (placedTilesTableData[row] !== undefined) {
-                    var changedColumns = Object.keys(rowData);
-                    if (changedColumns.includes("0")) {
-                        placedTilesTableData[row][1] = changedColumns.includes("1") ? rowData[1] : null;
-                        placedTilesTableData[row][2] = changedColumns.includes("2") ? rowData[2] : null;
-                        placedTilesTable.setCellMeta(row, 1, "editor", isEmpty(placedTilesTableData[row][0]) ? false : TileEditor);
-                        placedTilesTable.setCellMeta(row, 2, "editor", false);
-                    }
-
-                    if (changedColumns.includes("1")) {
-                        placedTilesTableData[row][2] = changedColumns.includes("2") ? rowData[2] : null;
-                        placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(placedTilesTable.getDataAtCell(row, 1)) ? false : OrientationEditor);
-                    }
-
-                    placedTilesTable.render();
+                var changedColumns = Object.keys(rowData);
+                if (changedColumns.includes("0")) {
+                    placedTilesTableData[row][1] = changedColumns.includes("1") ? rowData[1] : null;
+                    placedTilesTableData[row][2] = changedColumns.includes("2") ? rowData[2] : null;
+                    placedTilesTable.setCellMeta(row, 1, "editor", isEmpty(placedTilesTableData[row][0]) ? false : TileEditor);
+                    placedTilesTable.setCellMeta(row, 2, "editor", false);
                 }
-            });
 
-            updateLocalStoragePlacedTiles();
+                if (changedColumns.includes("1")) {
+                    placedTilesTableData[row][2] = changedColumns.includes("2") ? rowData[2] : null;
+                    placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(placedTilesTableData[row][1]) ? false : OrientationEditor);
+                }
+
+                placedTilesTable.render();
+            });
         }
 
         $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
@@ -229,9 +207,9 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
 
         data.slice().forEach(function(rowData, dataIndex) {
             var rowNum = dataIndex + pasteArea.startRow;
-            var coord = colNums.includes(0) ? rowData[colNums.indexOf(0)] : placedTilesTable.getDataAtCell(rowNum, 0);
-            var tileId = colNums.includes(1) ? parseInt(rowData[colNums.indexOf(1)], 10) : placedTilesTable.getDataAtCell(rowNum, 1);
-            var orientation = colNums.includes(2) ? parseInt(rowData[colNums.indexOf(2)], 10) : placedTilesTable.getDataAtCell(rowNum, 2);
+            var coord = colNums.includes(0) ? rowData[colNums.indexOf(0)] : placedTilesTableData[rowNum][0];
+            var tileId = colNums.includes(1) ? parseInt(rowData[colNums.indexOf(1)], 10) : placedTilesTableData[rowNum][1];
+            var orientation = colNums.includes(2) ? parseInt(rowData[colNums.indexOf(2)], 10) : placedTilesTableData[rowNum][2];
 
             if (colNums.includes(0)) {
                 var sourceFunc = tileCoordsSourceFromCoord(coord);
@@ -262,25 +240,11 @@ var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-ta
                 });
             }
         });
-    },
-    afterLoadData: (initialLoad) => {
-        if (!initialLoad) {
-            placedTilesTableData = placedTilesTable.getData();
-            drawMap();
-        }
     }
 });
 
+// Needed to add sources to the initial row, since it doesn't trigger afterCreateRow
 addPlacedTileTableSources(0);
-
-// Wait until the map has finished loading to draw the saved map. This is likely to kick in if a cache-refresh page
-// reload is issued.
-$("#placed-tiles-board").one("load", loadFromLocalStoragePlacedTiles);
-
-// If the image was cached, it may be loaded by the time the above event is attached, so load the saved map immdeiately.
-if ($("#placed-tiles-board").get(0).complete) {
-    loadFromLocalStoragePlacedTiles();
-}
 
 // Handsontable isn't properly displayed due to being hidden. Rendering once it's visible solves the problem.
 $("#placed-tiles-tab").on("shown.bs.tab", function(e) {
