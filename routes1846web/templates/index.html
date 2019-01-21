@@ -7,9 +7,6 @@
         <a class="nav-link active" id="placed-tiles-map-tab" data-toggle="tab" href="#placed-tiles-map-content" role="tab" aria-controls="placed-tiles-map" aria-selected="true">Place Tiles</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" id="placed-tiles-tab" data-toggle="tab" href="#placed-tiles-table-content" role="tab" aria-controls="placed-tiles-table" aria-selected="false">Tile Table</a>
-    </li>
-    <li class="nav-item">
         <a class="nav-link" id="railroads-tab" data-toggle="tab" href="#railroads-content" role="tab" aria-controls="railroads" aria-selected="false">Railroads</a>
     </li>
     <li>
@@ -24,15 +21,13 @@
     <div class="tab-pane fade show active" id="placed-tiles-map-content" role="tabpanel" aria-labelledby="placed-tiles-map-tab">
         <div id="game-board-controls" style="margin-bottom: 10px;">
             <button id="game-board-controls-clear" type="button" class="btn btn-outline-danger" data-toggle="modal" data-target="#confirm-clear-map-modal">Clear Map</button>
+            <!-- <div style="float: left; width: 20px;">&nbsp;</div> -->
+            <button id="tiles-import-export-button" type="button" class="btn btn btn-outline-primary" data-toggle="modal" data-target="#tiles-import-export-modal" style="margin-left: 20px">Import/Export</button>
         </div>
         <div id="game-board">
             <img id="placed-tiles-board" src="{{ url_for('static', filename='images/1846-Map.png') }}" />
             <canvas id="placed-tiles-board-canvas"></canvas>
         </div>
-    </div>
-    <div class="tab-pane fade" id="placed-tiles-table-content" role="tabpanel" aria-labelledby="placed-tiles-table-content">
-        <div style="float: left;" id="placed-tiles-table"></div>
-        <div style="float: left; width: 50px;">&nbsp;</div>
     </div>
     <div class="tab-pane fade" id="railroads-content" role="tabpanel" aria-labelledby="railroads-tab">
         <div style="float: left;">
@@ -82,6 +77,9 @@
 {% endblock %}
 
 {% block js %}
+function isEmpty(value) {
+    return value === '' || value === null || value === undefined;
+}
 
 {% include "js/placed-tiles-map.js.html" %}
 

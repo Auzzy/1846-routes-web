@@ -1,16 +1,14 @@
 var legalCoords = {{ tile_coords | safe }};
 
 function drawMap() {
-    if (placedTilesTable !== undefined) {
-        repositionTileCanvas();
+    repositionTileCanvas();
 
-        var mapCanvas = $("#placed-tiles-board-canvas").get(0);
-        mapCanvas.getContext('2d').clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+    var mapCanvas = $("#placed-tiles-board-canvas").get(0);
+    mapCanvas.getContext('2d').clearRect(0, 0, mapCanvas.width, mapCanvas.height);
 
-        for (rowNum in placedTilesTableData) {
-            placeTileOnMap(placedTilesTableData[rowNum][0], placedTilesTableData[rowNum][1], placedTilesTableData[rowNum][2]);
-        }
-    }
+    getTilesAsTable().forEach(row => {
+        drawTileOnMap(row[0], row[1], row[2]);
+    });
 }
 
 function repositionTileCanvas() {
@@ -54,10 +52,6 @@ function drawTileOnMap(coord, tileId, orientation) {
 
     // ...as well as if it was already loaded
     drawTile(context, tileImage, tileOrigin, mapImg);
-}
-
-function placeTileOnMap(coord, tileId, orientation) {
-    drawTileOnMap(coord, tileId, orientation);
 }
 
 function removeTileFromMap(coord) {
@@ -190,7 +184,7 @@ function populateOrientations(self, coord, tileId) {
                         var orientation = $(self).attr("data-orientation");
 
                         placeTile(coord, tileId, orientation);
-                        placeTileOnMap(coord, tileId, orientation);
+                        drawTileOnMap(coord, tileId, orientation);
 
                         $('#tile-selector').modal('hide');
                     });
@@ -296,10 +290,82 @@ $("#tile-selector").on("show.bs.modal", function() {
 });
 
 $("#confirm-clear-map-modal-confirm").click(function() {
-    placedTilesTable.alter("remove_row", 0, placedTilesTable.countRows() - 1);
-    addPlacedTileTableSources(0);
+    tilesTable = [];
     drawMap();
     updateLocalStoragePlacedTiles();
+});
+
+function importTiles(importText) {
+    return $.get("{{ url_for('legal_tile_coords') }}", {tile_coords: "[]"})
+        .then(async function(legalTileCoordsResponse) {
+            var importTableData = [];
+            await Promise.all(importText.trim().split("\n").map(rowStr => {
+                var rowData = rowStr.split(";").map(cell => cell.trim());
+                if (!legalTileCoordsResponse["tile-coords"].includes(rowData[0])) {
+                    return;
+                }
+
+                rowData[1] = parseInt(rowData[1]);
+                rowData[2] = parseInt(rowData[2]);
+
+                return $.when(
+                    $.get("{{ url_for('legal_tiles') }}", {coord: rowData[0]}),
+                    $.get("{{ url_for('legal_orientations') }}", {coord: rowData[0], tileId: rowData[1]})
+                ).done((legalTileIdsResponse, legalOrientationsResponse) => {
+                    var legalTileIds = legalTileIdsResponse[0]["legal-tile-ids"];
+                    var legalOrientations = legalOrientationsResponse[0]["legal-orientations"];
+                    
+                    if (!legalTileIds.includes(rowData[1]) || !legalOrientations.includes(rowData[2])) {
+                        return;
+                    }
+
+                    importTableData.push(rowData);
+                });
+            }));
+            return importTableData;
+        }).then(importTableData => {
+            var coordsInTable = [];
+            tilesTable = [];
+            importTableData.forEach(row => {
+                if (coordsInTable.includes(row[0])) {
+                    return;
+                }
+
+                coordsInTable.push(row[0]);
+                tilesTable.push(row);
+            });
+            
+            drawMap();
+        });
+}
+
+function prepareTilesForExport(exportTilesTable) {
+    exportTilesTable = exportTilesTable === undefined ? getTilesAsTable() : exportTilesTable;
+    return exportTilesTable.map(row => row.join("; ")).join("\n");
+}
+
+$("#tiles-import-save").click(function() {
+    $("#tiles-import-save").attr("disabled", true);
+    $("#til-import-export-textarea").attr("readonly", true);
+
+    importTiles($("#tiles-import-export-textarea").val())
+        .done(() => {
+            updateLocalStoragePlacedTiles();
+            $("#tiles-import-export-modal").modal("hide");
+        });
+});
+
+$("#tiles-import-export-modal").on("show.bs.modal", function() {
+    $("#tiles-import-save").attr("disabled", true);
+    $("#tiles-import-export-textarea").attr("readonly", true);
+
+    var tilesTableAsText = prepareTilesForExport();
+    $("#tiles-import-export-textarea").val("").val(tilesTableAsText);
+
+    $("#tiles-import-save").attr("disabled", false);
+    $("#tiles-import-export-textarea").attr("readonly", false);
+
+    enableSubmitViaKeyboard($("#tiles-import-export-modal"), $("#tiles-import-save"));
 });
 
 $("#placed-tiles-map-tab").on("shown.bs.tab", drawMap);

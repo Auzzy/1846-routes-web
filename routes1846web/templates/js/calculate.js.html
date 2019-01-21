@@ -88,7 +88,7 @@ function calculate() {
     var postData = {
         "railroads-json": JSON.stringify(getRailroadsAsTable()),
         "private-companies-json": JSON.stringify(privateCompaniesTable.getData()),
-        "board-state-json": JSON.stringify(placedTilesTable.getData()),
+        "board-state-json": JSON.stringify(getTilesAsTable()),
         "railroad-name": $("#railroad-name").val()
     }
     $.post("{{ url_for('calculate') }}", postData)

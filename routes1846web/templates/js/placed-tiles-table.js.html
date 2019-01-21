@@ -1,56 +1,48 @@
+var tilesTable = [];
+
+function getTilesAsTable() {
+    return tilesTable.slice();
+}
+
+function getTilesHeaders() {
+    return {{ placed_tiles_colnames | tojson | safe  }};
+}
+
 function updateLocalStoragePlacedTiles() {
     if (typeof(Storage) !== "undefined") {
-        localStorage.placedTilesTable = JSON.stringify(placedTilesTable.getData().filter(row => !row.every(isEmpty)));
+        localStorage.placedTilesTable = JSON.stringify(getTilesAsTable().filter(row => !row.every(isEmpty)));
     }
 }
 
 function loadFromLocalStoragePlacedTiles() {
     if (typeof(Storage) !== "undefined") {
         if (localStorage.placedTilesTable !== undefined) {
-            placedTilesTableStored = JSON.parse(localStorage.placedTilesTable);
-            placedTilesTableStored.forEach((row, rowNum) => {
-                placedTilesTableData.splice(rowNum, 0, row);
-                validateTileCoord(rowNum, row[0]);
-                if (!isEmpty(row[1])) {
-                    validateTileId(rowNum, row[0], row[1]);
-                    if (!isEmpty(row[2])) {
-                        validateOrientation(rowNum, row[0], row[1], row[2]);
-                    }
-                }
-                addPlacedTileTableSources(rowNum);
-                placedTilesTable.setCellMeta(row, 1, "editor", isEmpty(row[0]) ? false : TileEditor);
-                placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(row[1]) ? false : OrientationEditor);
-            });
-            // Need to add sources to the initial row, since it doesn't trigger afterCreateRow
-            addPlacedTileTableSources(placedTilesTableStored.length - 1);
+            tilesTable = JSON.parse(localStorage.placedTilesTable);
             drawMap();
         }
     }
 }
 
 function findNextEmptyRow() {
-    for (row = 0; row < placedTilesTableData.length; row++) {
-        if (placedTilesTable.isEmptyRow(row)) {
-            return row;
-        }
-    }
-}
-
-function findRowByCoord(coord) {
-    for (row = 0; row < placedTilesTableData.length; row++) {
-        if (placedTilesTableData[row][0] === coord) {
+    for (row = 0; row < tilesTable.length; row++) {
+        if (tilesTable[row].every(cell => isEmpty(cell))) {
             return row;
         }
     }
     return null;
 }
 
-function placeTile(coord, tileId, orientation, source) {
-    var newRow = placedTilesTableData.every(row =>
-        row[0] !== coord || row[1] !== tileId || row[2] !== orientation
-    );
+function findRowByCoord(coord) {
+    for (row = 0; row < tilesTable.length; row++) {
+        if (tilesTable[row][0] === coord) {
+            return row;
+        }
+    }
+    return null;
+}
 
-    if (!newRow) {
+function placeTile(coord, tileId, orientation) {
+    if (tilesTable.some(row => row[0] === coord && row[1] === tileId && row[2] === orientation)) {
         return;
     }
 
@@ -59,229 +51,18 @@ function placeTile(coord, tileId, orientation, source) {
         // This coordinate isn't already represented, so get a new row.
         row = findNextEmptyRow();
     }
-    var source = source || "api";
 
-    placedTilesTable.setDataAtCell([
-        [row, 0, coord],
-        [row, 1, tileId],
-        [row, 2, orientation]
-    ]);
+    tilesTable[row] = [coord, tileId, orientation];
 }
 
-function removeTile(coord, source) {
+function removeTile(coord) {
     var row = findRowByCoord(coord);
     if (row === null) {
         return;
     }
 
-    var source = source || "api";
-
-    placedTilesTable.setDataAtCell(row, 0, null, source);
+    tilesTable.splice(row, 1);
 }
-
-
-function tileCoordsSourceFromCoord(coord) {
-    return function (query, process) {
-        var tileCoords = placedTilesTableData.map(row => row[0]);
-        $.get("{{ url_for('legal_tile_coords') }}", {coord: coord, tile_coords: JSON.stringify(tileCoords)})
-            .done(function(result) {
-                process(result["tile-coords"]);
-            });
-    }
-}
-
-function tileCoordsSource(row) {
-    return function(query, process) {
-        var source = tileCoordsSourceFromCoord(placedTilesTableData[row][0]);
-        source(query, process);
-    }
-}
-
-function tileIdSourceFromCoord(coord) {
-    return function (query, process) {
-        $.get("{{ url_for('legal_tiles') }}", {coord: coord})
-            .done(function(result) {
-                process(result["legal-tile-ids"]);
-            });
-    }
-}
-
-function tileIdSource(row) {
-    return function(query, process) {
-        var source = tileIdSourceFromCoord(placedTilesTableData[row][0]);
-        source(query, process);
-    }
-}
-
-function orientationSourceFromCoord(coord, tileId) {
-    return function(query, process) {
-        $.get("{{ url_for('legal_orientations') }}", {coord: coord, tileId: tileId})
-            .done(function(result) {
-                process(result["legal-orientations"]);
-            });
-    }
-}
-
-function orientationSource(row) {
-    return function(query, process) {
-        var source = orientationSourceFromCoord(placedTilesTableData[row][0], placedTilesTableData[row][1]);
-        source(query, process);
-    }
-}
-
-function addPlacedTileTableSources(row) {
-    placedTilesTable.setCellMeta(row, 0, "source", tileCoordsSource(row));
-    placedTilesTable.setCellMeta(row, 1, "source", tileIdSource(row));
-    placedTilesTable.setCellMeta(row, 2, "source", orientationSource(row));
-}
-
-function validateTileTableCell(rowNum, colNum, value, sourceFunc) {
-    sourceFunc("", function(legalValues) {
-        if (!legalValues.includes(value)) {
-            placedTilesTable.setDataAtCell(rowNum, colNum, null, "edit");
-        }
-    });
-}
-
-function validateTileCoord(rowNum, coord) {
-    validateTileTableCell(rowNum, 0, coord, tileCoordsSourceFromCoord(coord));
-}
-
-function validateTileId(rowNum, coord, tileId) {
-    validateTileTableCell(rowNum, 1, parseInt(tileId), tileIdSourceFromCoord(coord));
-}
-
-function validateOrientation(rowNum, coord, tileId, orientation) {
-    validateTileTableCell(rowNum, 2, parseInt(orientation), orientationSourceFromCoord(coord, tileId));
-}
-
-function isEmpty(value) {
-    return value === '' || value === null || value === undefined;
-}
-
-var TileEditor = createTileEditor("{{ url_for('static', filename='images') }}");
-var OrientationEditor = createOrientationEditor("{{ url_for('static', filename='images') }}");
-
-var placedTilesTableData = [new Array({{ placed_tiles_colnames | length }}).fill(null)];
-var placedTilesTable = new Handsontable(document.getElementById("placed-tiles-table"), {
-    data: placedTilesTableData,
-    rowHeaders: false,
-    colHeaders: {{ placed_tiles_colnames | tojson | safe }},
-    startRows: 1,
-    minSpareRows: 1,
-    enterMoves: {row: 0, col: 1},
-    columns: [
-        {
-            type: 'dropdown',
-            allowInvalid: false,
-            source: [],
-            // Required to allow pasting when using a dynamic source. I'm unclear as to why...
-            editor: 'dropdown'
-        },
-        {
-            type: 'dropdown',
-            allowInvalid: false,
-            source: [],
-            editor: false,
-            renderer: customTileDropdownRenderer("{{ url_for('static', filename='images') }}"),
-            allowHtml: true
-        },
-        {
-            type: 'dropdown',
-            allowInvalid: false,
-            source: [],
-            editor: false,
-            renderer: customOrientationDropdownRenderer("{{ url_for('static', filename='images') }}"),
-            allowHtml: true
-        }
-    ],
-    afterChange: (changes, source) => {
-        if (changes !== null) {
-            var changesByRow = {};
-            changes.forEach(function(change) {
-                var row = change[0].toString();
-                if (!Object.keys(changesByRow).includes(row)) {
-                    changesByRow[row] = {};
-                }
-                changesByRow[row][change[1]] = change[3];
-            });
-
-
-            Object.entries(changesByRow).forEach(([row, rowData]) => {
-                if (placedTilesTableData[row] !== undefined) {
-                    var changedColumns = Object.keys(rowData);
-                    if (changedColumns.includes("0")) {
-                        placedTilesTableData[row][1] = changedColumns.includes("1") ? rowData[1] : null;
-                        placedTilesTableData[row][2] = changedColumns.includes("2") ? rowData[2] : null;
-                        placedTilesTable.setCellMeta(row, 1, "editor", isEmpty(placedTilesTableData[row][0]) ? false : TileEditor);
-                        placedTilesTable.setCellMeta(row, 2, "editor", false);
-                    }
-
-                    if (changedColumns.includes("1")) {
-                        placedTilesTableData[row][2] = changedColumns.includes("2") ? rowData[2] : null;
-                        placedTilesTable.setCellMeta(row, 2, "editor", isEmpty(placedTilesTableData[row][1]) ? false : OrientationEditor);
-                    }
-
-                    placedTilesTable.render();
-                }
-            });
-
-            updateLocalStoragePlacedTiles();
-        }
-
-        $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
-    },
-    afterCreateRow: (index, amount) => {
-        Array.from(new Array(amount).keys(), i => i + index).forEach(function(row) {
-            addPlacedTileTableSources(row);
-        });
-    },
-    beforePaste: function(data, pasteAreaArray) {
-        var pasteArea = pasteAreaArray[0];
-
-        var colNums = Array.from(new Array(data[0].length).keys(), i => i + pasteArea.startCol);
-
-        // Remove all whitespace
-        data.slice().forEach(function(row, index) {
-            data.splice(index, 1, row.map(col => col.trim()));
-        });
-
-        if (colNums.includes(0)) {
-            // Remove duplicate coordinates.
-            data.slice().forEach(function(row, index) {
-                while (true) {
-                    var nextMatch = data.slice(index + 1).findIndex(item => item[0] == row[0]);
-                    if (nextMatch == -1) {
-                        break;
-                    }
-
-                    data.splice(index + 1 + nextMatch, 1);
-                }
-            });
-        }
-
-        data.slice().forEach(function(rowData, dataIndex) {
-            var rowNum = dataIndex + pasteArea.startRow;
-            var coord = colNums.includes(0) ? rowData[colNums.indexOf(0)] : placedTilesTableData[rowNum][0];
-            var tileId = colNums.includes(1) ? parseInt(rowData[colNums.indexOf(1)], 10) : placedTilesTableData[rowNum][1];
-            var orientation = colNums.includes(2) ? parseInt(rowData[colNums.indexOf(2)], 10) : placedTilesTableData[rowNum][2];
-
-            if (colNums.includes(0)) {
-                validateTileCoord(rowNum, coord);
-            }
-            if (colNums.includes(1)) {
-                data[dataIndex][colNums.indexOf(1)] = tileId;
-                validateTileId(rowNum, coord, tileId);
-            }
-            if (colNums.includes(2)) {
-                data[dataIndex][colNums.indexOf(2)] = orientation;
-                validateOrientation(rowNum, coord, tileId, orientation);
-            }
-        });
-    }
-});
-
-addPlacedTileTableSources(0);
 
 // Wait until the map has finished loading to draw the saved map. This is likely to kick in if a cache-refresh page
 // reload is issued.
@@ -291,8 +72,3 @@ $("#placed-tiles-board").one("load", loadFromLocalStoragePlacedTiles);
 if ($("#placed-tiles-board").get(0).complete) {
     loadFromLocalStoragePlacedTiles();
 }
-
-// Handsontable isn't properly displayed due to being hidden. Rendering once it's visible solves the problem.
-$("#placed-tiles-tab").on("shown.bs.tab", function(e) {
-    placedTilesTable.render();
-});
