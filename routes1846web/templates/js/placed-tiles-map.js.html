@@ -1,7 +1,10 @@
 var legalCoords = {{ tile_coords | safe }};
+var firstCoord = legalCoords[0]
+var lastCoord = legalCoords[legalCoords.length - 1]
+var currentCoordFocus = undefined;
 
 function drawMap() {
-    repositionTileCanvas();
+    repositionCanvases();
 
     var mapCanvas = $("#placed-tiles-board-canvas").get(0);
     mapCanvas.getContext('2d').clearRect(0, 0, mapCanvas.width, mapCanvas.height);
@@ -11,14 +14,39 @@ function drawMap() {
     });
 }
 
-function repositionTileCanvas() {
+function repositionCanvases() {
     var mapImage = $("#placed-tiles-board").get(0);
-    $("#placed-tiles-board-canvas")
+    $("#placed-tiles-board-canvas, #tile-focus-canvas")
         .css("position", "absolute")
         .css("left", mapImage.offsetLeft)
         .css("top", mapImage.offsetTop)
         .prop("width", mapImage.width)
         .prop("height", mapImage.height);
+}
+
+function clearAllHighlights() {
+    var canvas = $("#tile-focus-canvas").get(0);
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function highlightCoord(coord) {
+    var mapImg = $("#placed-tiles-board").get(0);
+    var focusCanvas = $("#tile-focus-canvas").get(0);
+    var context = focusCanvas.getContext('2d');
+
+    var rowAndCol = coordToRowAndCol(coord);
+    var tilePoints = getTilePoints(focusCanvas, rowAndCol.row, rowAndCol.col);
+
+    var focusContext = focusCanvas.getContext("2d");
+    focusContext.strokeStyle = "#00ffff";
+    focusContext.shadowBlur = 20;
+    focusContext.shadowColor = "#00ffff";
+    focusContext.lineWidth = 3;
+    focusContext.beginPath();
+    focusContext.moveTo(tilePoints[0].x, tilePoints[0].y);
+    tilePoints.slice(1).forEach(point => focusContext.lineTo(point.x, point.y));
+    focusContext.closePath();
+    focusContext.stroke();
 }
 
 function drawTileOnMap(coord, tileId, orientation) {
@@ -255,18 +283,24 @@ $("#tile-selector-modal-body").scroll(function(event) {
     }
 });
 
-$("#placed-tiles-board-canvas").click(function(event) {
+function openTileSelectionModal(rowAndCol) {
+    if (rowAndCol !== undefined) {
+        var coord = rowAndColToCoord(rowAndCol);
+        if (legalCoords.includes(coord)) {
+            highlightCoord(coord);
+            populateModal(coord);
+            $('#tile-selector').attr("data-coord", coord);
+            $('#tile-selector').modal('show');
+        }
+    }
+}
+
+$("#tile-focus-canvas").click(function(event) {
     var posXOnImg = event.pageX - $(this).offset().left;
     var posYOnImg = event.pageY - $(this).offset().top;
 
     var rowAndCol = mapPointToTile(this, {x: posXOnImg, y: posYOnImg});
-    if (rowAndCol !== undefined) {
-        var coord = rowAndColToCoord(rowAndCol);
-        if (legalCoords.includes(coord)) {
-            populateModal(coord);
-            $('#tile-selector').modal('show');
-        }
-    }
+    openTileSelectionModal(rowAndCol);
 });
 
 $("#delete-tile-button").click(function(event) {
@@ -287,6 +321,11 @@ $("#tile-selector").on("show.bs.modal", function() {
     // Reset hack
     $("#tile-selector").css("display", "none");
     $("#tile-selector").css("visibility", "visible");
+});
+
+$("#tile-selector").on("hidden.bs.modal", function() {
+    currentCoordFocus = $('#tile-selector').attr("data-coord");
+    $("#placed-tiles-board").focus();
 });
 
 $("#confirm-clear-map-modal-confirm").click(function() {
@@ -368,10 +407,58 @@ $("#tiles-import-export-modal").on("show.bs.modal", function() {
     enableSubmitViaKeyboard($("#tiles-import-export-modal"), $("#tiles-import-save"));
 });
 
+$("#placed-tiles-board").focus(function(event) {
+    if (currentCoordFocus === undefined) {
+        // This condition only seems to be true if focus is coming from SHIFT+TAB, maybe because it's the final element
+        // on the page. For now, that's good enough for me.
+        currentCoordFocus = event.relatedTarget === null ? lastCoord : firstCoord;
+    }
+
+    clearAllHighlights();
+    highlightCoord(currentCoordFocus);
+});
+
+$("#placed-tiles-board").keydown(function(event) {
+    if (event.key === "Tab") {
+        if (event.shiftKey) {
+            if (currentCoordFocus === firstCoord) {
+                currentCoordFocus = undefined;
+            } else {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+
+                currentCoordFocus = legalCoords[legalCoords.indexOf(currentCoordFocus) - 1];
+            }
+        } else {
+            if (currentCoordFocus === lastCoord) {
+                currentCoordFocus = undefined;
+            } else {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+
+                currentCoordFocus = legalCoords[legalCoords.indexOf(currentCoordFocus) + 1];
+            }
+        }
+
+        clearAllHighlights();
+        if (currentCoordFocus !== undefined) {
+            highlightCoord(currentCoordFocus);
+        }
+    } else if (event.key === "Enter") {
+        openTileSelectionModal(coordToRowAndCol(currentCoordFocus));
+    }
+});
+
+$("#placed-tiles-board").blur(function() {
+    currentCoordFocus = undefined;
+});
+
 $("#placed-tiles-map-tab").on("shown.bs.tab", drawMap);
 
 $("#game-board-controls")
     .attr("width", $("#placed-tiles-board").get(0).clientWidth)
     .css("text-align", "center");
 
-repositionTileCanvas();
+repositionCanvases();

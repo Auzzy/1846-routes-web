@@ -25,8 +25,9 @@
             <button id="tiles-import-export-button" type="button" class="btn btn btn-outline-primary" data-toggle="modal" data-target="#tiles-import-export-modal" style="margin-left: 20px">Import/Export</button>
         </div>
         <div id="game-board">
-            <img id="placed-tiles-board" src="{{ url_for('static', filename='images/1846-Map.png') }}" />
+            <img tabindex="0" id="placed-tiles-board" src="{{ url_for('static', filename='images/1846-Map.png') }}" />
             <canvas id="placed-tiles-board-canvas"></canvas>
+            <canvas id="tile-focus-canvas"></canvas>
         </div>
     </div>
     <div class="tab-pane fade" id="railroads-content" role="tabpanel" aria-labelledby="railroads-tab">
