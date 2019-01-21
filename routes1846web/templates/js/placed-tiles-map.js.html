@@ -167,9 +167,35 @@ function setOpacity(element, alpha) {
         .css("filter", `alpha(opacity=${alphaPercent})`);
 }
 
-function populateOrientations(self, coord, tileId) {
-    $.get("{{ url_for('legal_orientations') }}", {coord: coord, tileId: tileId})
-        .done(function(result) {
+function populateOrientations(sourceTile, coord, tileId) {
+    function selectOrientation(source) {
+        // Highlight the orientation as selected. This is both to preserve the old paradigm, and to
+        // provide some visual cues if a bug occurs.
+        $("#tile-orientations").children().each(function (k, element) {
+            if (element != source) {
+                setOpacity($(element), .2);
+            }
+        });
+
+        setOpacity($(source), 1);
+
+        $("#tile-orientations > .active").removeClass("active");
+        $(source).addClass("active");
+
+        // Commit the selection and close the modal
+        var coord = $(source).attr("data-coord");
+        var tileId = $(source).attr("data-tile-id");
+        var orientation = $(source).attr("data-orientation");
+
+        placeTile(coord, tileId, orientation);
+        drawTileOnMap(coord, tileId, orientation);
+
+        $('#tile-selector').modal('hide');
+    }
+
+    var sourceOutline = $(sourceTile).css("outline");
+    return $.get("{{ url_for('legal_orientations') }}", {coord: coord, tileId: tileId})
+        .then(function(result) {
             $("#tile-orientations").empty();
 
             // Reset the tile orientation viewport
@@ -180,41 +206,56 @@ function populateOrientations(self, coord, tileId) {
                 var orientationStr = orientation.toString();
                 var tileIdStr = tileId.toString().padStart(3, "0");
                 var imgSrc = `{{ url_for('static', filename='images') }}/${tileIdStr}-${orientationStr}.png`;
-            
-                var tileImage = $("<img></img>")
-                    .attr("src", imgSrc)
-                    .attr("width", "88px")
-                    .attr("height", "100px")
-                    .css("display", "block")
+
+                // The img is wrapped in a div because I couldn't draw an outline on the img itself when it received
+                // focus. I am unclear as to why. But I found that letting the div get focus and outlining the img
+                // works. So sure.
+                var tileImage = $("<div></div>")
                     .css("margin-bottom", "10px")
                     .attr("data-coord", coord)
                     .attr("data-tile-id", tileId)
                     .attr("data-orientation", orientation)
-                    .click(function() {
-                        var self = this;
+                    .attr("tabIndex", "-1")
+                    .append($("<img></img>")
+                        .attr("src", imgSrc)
+                        .attr("width", "88px")
+                        .attr("height", "100px")
+                    )
+                    .click(selectOrientation)
+                    .keydown(function(event) {
+                        if (event.key === "Enter") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            event.stopImmediatePropagation();
 
-                        // Highlight the orientation as selected. This is both to preserve the old paradigm, and to
-                        // provide some visual cues if a bug occurs.
-                        $("#tile-orientations").children().each(function (index, element) {
-                            if (element != self) {
-                                setOpacity($(element), .2);
+                            selectOrientation(this);
+                        } else if (event.key === "Tab") {
+                            event.stopImmediatePropagation();
+                            event.stopPropagation();
+                            event.preventDefault();
+
+                            var tileId = $(this).attr("data-tile-id");
+                            var index = $(this).index();
+                            if (event.shiftKey) {
+                                if (index === 0) {
+                                    $("#tile-options").find(`img[data-tile-id='${tileId}']`).prev().focus();
+                                } else {
+                                    $(this).prev().focus();
+                                }
+                            } else {
+                                if (index === result["legal-orientations"].length - 1) {
+                                    $("#tile-options").find(`img[data-tile-id='${tileId}']`).next().focus();
+                                } else {
+                                    $(this).next().focus();
+                                }
                             }
-                        });
-
-                        setOpacity($(self), 1);
-
-                        $("#tile-orientations > .active").removeClass("active");
-                        $(self).addClass("active");
-
-                        // Commit the selection and close the modal
-                        var coord = $(self).attr("data-coord");
-                        var tileId = $(self).attr("data-tile-id");
-                        var orientation = $(self).attr("data-orientation");
-
-                        placeTile(coord, tileId, orientation);
-                        drawTileOnMap(coord, tileId, orientation);
-
-                        $('#tile-selector').modal('hide');
+                        }
+                    })
+                    .focus(function(event) {
+                        $(this).children().css("outline", sourceOutline)
+                    })
+                    .blur(function(event) {
+                        $(this).children().css("outline", "");
                     });
                 
                 $("#tile-orientations").append(setOpacity(tileImage, 1));
@@ -223,6 +264,24 @@ function populateOrientations(self, coord, tileId) {
 }
 
 function populateModal(coord) {
+    function selectTile(source) {
+        $("#tile-options").children().each(function (index, element) {
+            if (element != source) {
+                setOpacity($(element), .2);
+            }
+        });
+
+        setOpacity($(source), 1);
+
+        populateOrientations(source, $(source).attr("data-coord"), $(source).attr("data-tile-id"))
+            .done(function() {
+                $("#tile-orientations").children().first().focus();
+            });
+
+        $("#tile-options > .active").removeClass("active");
+        $(source).addClass("active");
+    }
+
     $("#tileSelectorLabel").text(coord.toString());
 
     $("#delete-tile-button").attr("data-coord", coord.toString());
@@ -241,25 +300,33 @@ function populateModal(coord) {
                     .attr("src", imgSrc)
                     .attr("width", "100px")
                     .attr("height", "88px")
+                    .attr("tabIndex", "0")
                     .css("display", "block")
                     .css("margin-bottom", "10px")
                     .attr("data-coord", coord)
                     .attr("data-tile-id", tileId)
                     .click(function() {
-                        var self = this;
+                        selectTile(this);
+                    })
+                    .keydown(function(event) {
+                        if (event.key === "Enter") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            event.stopImmediatePropagation();
 
-                        $("#tile-options").children().each(function (index, element) {
-                            if (element != self) {
-                                setOpacity($(element), .2);
+                            selectTile(this);
+                        } else if (event.key == "Tab") {
+                            if ($(this).hasClass("active")) {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                event.stopImmediatePropagation();
+                                if (event.shiftKey) {
+                                    $("#tile-orientations").children().last().focus();
+                                } else {
+                                    $("#tile-orientations").children().first().focus();
+                                }
                             }
-                        });
-
-                        setOpacity($(self), 1);
-
-                        populateOrientations(self, $(self).attr("data-coord"), $(self).attr("data-tile-id"));
-
-                        $("#tile-options > .active").removeClass("active");
-                        $(self).addClass("active");
+                        }
                     });
               
                 $("#tile-options").append(setOpacity(tileImage, 1));
@@ -287,6 +354,7 @@ function openTileSelectionModal(rowAndCol) {
     if (rowAndCol !== undefined) {
         var coord = rowAndColToCoord(rowAndCol);
         if (legalCoords.includes(coord)) {
+            clearAllHighlights();
             highlightCoord(coord);
             populateModal(coord);
             $('#tile-selector').attr("data-coord", coord);
