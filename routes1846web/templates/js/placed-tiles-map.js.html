@@ -205,9 +205,6 @@ function populateModal(coord) {
 
     $("#delete-tile-button").attr("data-coord", coord.toString());
 
-    $("#place-tile-button").prop("disabled", true);
-    $("#place-tile-button").off("click");
-
     $.get("{{ url_for('legal_tiles') }}", {coord: coord})
         .done(function(result) {
             $("#tile-options").empty();
@@ -228,9 +225,6 @@ function populateModal(coord) {
                     .attr("data-tile-id", tileId)
                     .click(function() {
                         var self = this;
-
-                        $("#place-tile-button").prop("disabled", true);
-                        $("#place-tile-button").off("click");
 
                         $("#tile-options").children().each(function (index, element) {
                             if (element != self) {
