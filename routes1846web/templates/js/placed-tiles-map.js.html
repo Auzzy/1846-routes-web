@@ -448,6 +448,30 @@ $("#placed-tiles-board").keydown(function(event) {
         }
     } else if (event.key === "Enter") {
         openTileSelectionModal(coordToRowAndCol(currentCoordFocus));
+    } else if (["w", "a", "s", "d"].includes(event.key)) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+
+        var rowAndCol = coordToRowAndCol(currentCoordFocus);
+        if (event.key === "w") {
+            rowAndCol.row -= 1;
+            rowAndCol.col += 1;
+        } else if (event.key === "a") {
+            rowAndCol.col -= 2;
+        } else if (event.key === "s") {
+            rowAndCol.row += 1;
+            rowAndCol.col -= 1;
+        } else if (event.key === "d") {
+            rowAndCol.col += 2;
+        }
+
+        var newCoord = rowAndColToCoord(rowAndCol);
+        if (legalCoords.includes(newCoord)) {
+            currentCoordFocus = newCoord;
+            clearAllHighlights();
+            highlightCoord(currentCoordFocus);
+        }
     }
 });
 
