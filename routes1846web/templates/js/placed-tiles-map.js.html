@@ -29,6 +29,46 @@ function clearAllHighlights() {
     canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 }
 
+function keepHighlightVisible(tilePoints) {
+    var mapImg = $("#placed-tiles-board");
+
+    var tileOrigin = {
+        x: Math.min(...tilePoints.map(coord => coord.x)) + mapImg.offset().left,
+        y: Math.min(...tilePoints.map(coord => coord.y)) + mapImg.offset().top
+    }
+    var tileAntiOrigin = {
+        x: Math.max(...tilePoints.map(coord => coord.x)) + mapImg.offset().left,
+        y: Math.max(...tilePoints.map(coord => coord.y)) + mapImg.offset().top
+    };
+
+    var viewportTop = $(window).scrollTop();
+    var viewportBottom = viewportTop + window.innerHeight;
+    var viewportLeft = $(window).scrollLeft();
+    var viewportRight = viewportLeft + window.innerWidth;
+
+    var scrollTop = viewportTop;
+    var scrollLeft = viewportLeft;
+
+    if (tileOrigin.y < viewportTop) {
+        scrollTop = Math.max(mapImg.offset().top, viewportTop - ((viewportBottom - viewportTop) - (tileAntiOrigin.y - tileOrigin.y)));
+    } else if (tileAntiOrigin.y > viewportBottom) {
+        scrollTop = Math.min(mapImg.offset().top + mapImg.height(), viewportBottom - (tileAntiOrigin.y - tileOrigin.y));
+    }
+
+    if (tileOrigin.x < viewportLeft) {
+        scrollLeft = Math.max(mapImg.offset().left, viewportLeft - ((viewportRight - viewportLeft) - (tileAntiOrigin.x - tileOrigin.x)));
+    } else if (tileAntiOrigin.x > viewportRight) {
+        scrollLeft = Math.min(mapImg.offset().left + mapImg.width(), viewportRight - (tileAntiOrigin.x - tileOrigin.x));
+    }
+
+    window.scrollTo({
+        top: scrollTop,
+        left: scrollLeft,
+        behavior: 'smooth'
+    });
+
+}
+
 function highlightCoord(coord) {
     var mapImg = $("#placed-tiles-board").get(0);
     var focusCanvas = $("#tile-focus-canvas").get(0);
@@ -47,6 +87,8 @@ function highlightCoord(coord) {
     tilePoints.slice(1).forEach(point => focusContext.lineTo(point.x, point.y));
     focusContext.closePath();
     focusContext.stroke();
+
+    keepHighlightVisible(tilePoints);
 }
 
 function drawTileOnMap(coord, tileId, orientation) {
