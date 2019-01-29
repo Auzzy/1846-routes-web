@@ -1,7 +1,11 @@
 {% extends "layout.html" %}
 
 {% block body %}
-<h2>1846 Route Calculator</h2>
+<div>
+    <span style="display: inline-block; font-size: 2rem; font-family: inherit; font-weight: 500;">1846 Route Calculator</span>
+    <span>&nbsp;</span>
+    <button type="button" class="btn btn-sm btn-outline-info align-middle align-text-bottom" data-toggle="modal" data-target="#aboutModal">About</button>
+</div>
 <ul class="nav nav-tabs" id="routes-tabs" role="tablist">
     <li class="nav-item">
         <a class="nav-link active" id="placed-tiles-map-tab" data-toggle="tab" href="#placed-tiles-map-content" role="tab" aria-controls="placed-tiles-map" aria-selected="true">Place Tiles</a>
@@ -64,6 +68,22 @@
                     <button class="btn btn-outline-danger" data-toggle="modal" data-target="#calc-report-issue-modal">Report Issue</button>
                 </div>
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="aboutModal" tabindex="-1" role="dialog" aria-labelledby="aboutModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">About</h2>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                {% include "about-modal.html" %}
             </div>
         </div>
     </div>
