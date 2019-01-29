@@ -46,13 +46,14 @@ function placeTile(coord, tileId, orientation) {
         return;
     }
 
-    var row = findRowByCoord(coord);
+    var row = findRowByCoord(coord) || findNextEmptyRow()
     if (row === null) {
-        // This coordinate isn't already represented, so get a new row.
-        row = findNextEmptyRow();
+        tilesTable.push([coord, tileId, orientation]);
+    } else {
+        tilesTable[row] = [coord, tileId, orientation];
     }
 
-    tilesTable[row] = [coord, tileId, orientation];
+    updateLocalStoragePlacedTiles();
 }
 
 function removeTile(coord) {
@@ -62,6 +63,8 @@ function removeTile(coord) {
     }
 
     tilesTable.splice(row, 1);
+
+    updateLocalStoragePlacedTiles();
 }
 
 // Wait until the map has finished loading to draw the saved map. This is likely to kick in if a cache-refresh page

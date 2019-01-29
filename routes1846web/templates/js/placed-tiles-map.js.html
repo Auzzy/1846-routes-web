@@ -263,7 +263,9 @@ function populateOrientations(sourceTile, coord, tileId) {
                         .attr("width", "88px")
                         .attr("height", "100px")
                     )
-                    .click(selectOrientation)
+                    .click(function(event) {
+                        selectOrientation(this);
+                    })
                     .keydown(function(event) {
                         if (event.key === "Enter") {
                             event.preventDefault();
