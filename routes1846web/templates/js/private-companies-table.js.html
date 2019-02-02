@@ -7,7 +7,13 @@ function updateLocalStoragePrivateCompanies() {
 function loadFromLocalStoragePrivateCompanies() {
     if (typeof(Storage) !== "undefined") {
         if (localStorage.privateCompaniesTable !== undefined) {
-            privateCompaniesTable.loadData(JSON.parse(localStorage.privateCompaniesTable));
+            privateCompaniesData = JSON.parse(localStorage.privateCompaniesTable).map((row, rowNum) => {
+                if (isEmpty(row[0])) {
+                    row[0] = privateCompaniesTableData[rowNum][0];
+                }
+                return row;
+            });
+            privateCompaniesTable.loadData(privateCompaniesData);
         }
     }
 }
@@ -69,6 +75,13 @@ var privateCompaniesTable = new Handsontable(document.getElementById("private-co
         }
         return cellProperties;
     },
+    beforeChange: (changes) => {
+        changes.slice().forEach(([row, col, oldValue, newValue], index) => {
+            if (col === 0) {
+                changes.splice(index, 1);
+            }
+        });
+    },
     afterChange: (changes) => {
         if (changes != null) {
             var colHeaders = privateCompaniesTable.getColHeader();
@@ -76,7 +89,7 @@ var privateCompaniesTable = new Handsontable(document.getElementById("private-co
             var coordColumn = colHeaders.findIndex(header => header == "token coordinate");
 
             changes.forEach(([row, col, oldValue, newValue]) => {
-                if (col == ownerColumn && isEmpty(newValue)) {
+                if (col === ownerColumn && isEmpty(newValue)) {
                     privateCompaniesTableData[row][coordColumn] = null;
                 }
             });
