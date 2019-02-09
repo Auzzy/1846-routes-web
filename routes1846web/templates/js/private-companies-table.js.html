@@ -1,108 +1,215 @@
+function getPrivateCompaniesHeaders() {
+    return $("#private-companies-table th").map((index, header) => $(header).text().toLowerCase()).toArray();
+}
+
+function getPrivateCompanyNames() {
+    return $("#private-companies-table tr[data-name]").map((index, row) => $(row).attr("data-name")).toArray();
+}
+
+function getPrivateCompaniesAsTable() {
+    var privateCompanyTableData = [];
+    $("#private-companies-table tr[data-name]").each((index, element) => {
+        return privateCompanyTableData.push([
+            $(element).attr("data-name"),
+            $(element).attr("data-owner"),
+            $(element).attr("data-coord")
+        ]);
+    });
+    return privateCompanyTableData;
+}
+
+function setPrivateCompanyTokenCoord(privateCompanyRow, tokenCoord) {
+    var tokenDisplay = privateCompanyRow.find(".company-token .display");
+    tokenDisplay.empty();
+
+    if (isEmpty(tokenCoord)) {
+        // No token coord, so reset and bail
+        tokenDisplay.removeAttr("data-coord");
+        privateCompanyRow.removeAttr("data-coord");
+        return;
+    }
+
+    tokenDisplay
+        .attr("data-coord", tokenCoord)
+        .html(tokenCoord);
+    privateCompanyRow.attr("data-coord", tokenDisplay.attr("data-coord"));
+}
+
+function setPrivateCompanyOwner(privateCompanyRow, owner) {
+    var ownerDisplay = privateCompanyRow.find(".company-owner .display");
+    ownerDisplay.empty();
+
+    if (isEmpty(owner)) {
+        // No owner, so reset and bail
+        ownerDisplay.removeAttr("data-owner");
+        privateCompanyRow.removeAttr("data-owner");
+        privateCompanyRow.find(".company-token button").hide();
+        return;
+    }
+
+    ownerDisplay
+        .attr("data-owner", owner)
+        .html(owner);
+    privateCompanyRow.attr("data-owner", ownerDisplay.attr("data-owner"));
+
+    setPrivateCompanyTokenCoord(privateCompanyRow, null);
+    if (privateCompanyRow.attr("data-name") !== "Mail Contract") {
+        privateCompanyRow.find(".company-token button").show();
+    }
+}
+
 function updateLocalStoragePrivateCompanies() {
     if (typeof(Storage) !== "undefined") {
-        localStorage.privateCompaniesTable = JSON.stringify(privateCompaniesTable.getData());
     }
 }
 
 function loadFromLocalStoragePrivateCompanies() {
     if (typeof(Storage) !== "undefined") {
         if (localStorage.privateCompaniesTable !== undefined) {
-            privateCompaniesData = JSON.parse(localStorage.privateCompaniesTable).map((row, rowNum) => {
-                if (isEmpty(row[0])) {
-                    row[0] = privateCompaniesTableData[rowNum][0];
-                }
-                return row;
-            });
-            privateCompaniesTable.loadData(privateCompaniesData);
         }
     }
 }
 
-function privateCompanyOwnerSource(query, process) {
-    process(getRailroads());
+function privateCompanyHeaders() {
+    $("#private-companies-table")
+        .append($("<tr></tr>")
+            .css("font-size", "125%")
+            .append($("<th></th>")
+                .css("width", 200)
+                .text("Name"))
+            .append($("<th></th>")
+                .css("width", 200)
+                .text("Owner"))
+            .append($("<th></th>")
+                .css("width", 75)
+                .text("Token")));
 }
 
-function tokenCoordSource(row) {
-    return function(query, process) {
-        $.get("{{ url_for('legal_token_coords') }}", {companyName: privateCompaniesTable.getDataAtCell(row, 0)})
-            .done(function(result) {
-                process(result["coords"]);
+function privateCompanyNewRow(companyName) {
+    $("#private-companies-table")
+        .append($("<tr></tr>")
+            .css("border-bottom", "1px solid black")
+            .attr("data-name", companyName)
+            .append($("<td></td>")
+                .css("width", 200)
+                .append($("<div></div>")
+                    .addClass("company-name")))
+                    .attr("data-name", companyName)
+                    .text(companyName)
+            .append($("<td></td>")
+                .css("width", 200)
+                .append($("<div></div>")
+                    .addClass("dropdown")
+                    .addClass("company-owner")
+                    .append($("<button></button>")
+                        .addClass("btn btn-sm btn-outline-primary dropdown-toggle")
+                        .css("float", "left")
+                        .attr("type", "button")
+                        .attr("data-toggle", "dropdown")
+                        .attr("aria-haspopup", "true")
+                        .attr("aria-expanded", "false"))
+                    .append($("<div></div>")
+                        .html("&nbsp;")
+                        .css("width", "10")
+                        .css("float", "left"))
+                    .append($("<span></span>")
+                        .addClass("display")
+                        .css("float", "left"))
+                    .append($("<div></div>")
+                        .addClass("dropdown-menu"))
+                    .on("show.bs.dropdown", function() {
+                        populatePrivateCompanyOwnerDropdown($(this).parents("tr"));
+                    })))
+            .append($("<td></td>")
+                .css("width", 75)
+                .append($("<div></div>")
+                    .addClass("dropdown")
+                    .addClass("company-token")
+                    .append($("<button></button>")
+                        .addClass("btn btn-sm btn-outline-primary dropdown-toggle")
+                        .css("float", "left")
+                        .attr("type", "button")
+                        .attr("data-toggle", "dropdown")
+                        .attr("aria-haspopup", "true")
+                        .attr("aria-expanded", "false")
+                        .hide())
+                    .append($("<div></div>")
+                        .html("&nbsp;")
+                        .css("width", "10")
+                        .css("float", "left"))
+                    .append($("<span></span>")
+                        .addClass("display")
+                        .css("float", "left"))
+                    .append($("<div></div>")
+                        .addClass("dropdown-menu"))
+                    .on("show.bs.dropdown", function() {
+                        populatePrivateCompanyTokenCoordDropdown($(this).parents("tr"));
+                    })))
+            .append($("<button></button>")
+                .addClass("btn btn-outline-danger")
+                .css("margin-left", 50)
+                .attr("type", "button")
+                .append($("<span></span>")
+                    .addClass("oi oi-delete"))
+                    .click(function() {
+                        var sourceRow = $(this).parents("tr");
+                        setPrivateCompanyTokenCoord(sourceRow, null);
+                        setPrivateCompanyOwner(sourceRow, null);
+                        updateLocalStoragePrivateCompanies();
+                    })));
+}
+
+function populatePrivateCompanyTokenCoordDropdown(sourceRow) {
+    var dropdownMenu = sourceRow.find(".company-token .dropdown-menu");
+    dropdownMenu.empty();
+
+    var companyName = sourceRow.attr("data-name");
+    $.get("{{ url_for('legal_token_coords') }}", {companyName: companyName})
+        .done(function(result) {
+            result["coords"].forEach(tokenCoord => {
+                dropdownMenu
+                    .append($("<a></a>")
+                        .addClass("dropdown-item")
+                        .attr("data-coord", tokenCoord)
+                        .attr("href", "#")
+                        .text(tokenCoord)
+                        .click(function() {
+                            setPrivateCompanyTokenCoord(sourceRow, $(this).attr("data-coord"));
+
+                            sourceRow.find(".company-token button").focus();
+
+                            updateLocalStoragePrivateCompanies();
+                        })
+                    );
             });
-    }
-}
-
-var privateCompaniesTableData = [
-    {%- for name in private_company_rownames %}
-    ["{{ name }}"{%- for k in range(private_company_colnames | length - 1) -%}, null{%- endfor -%}]{%- if not loop.last -%},{%- endif -%}
-    {%- endfor %}
-];
-
-var privateCompaniesTable = new Handsontable(document.getElementById("private-companies-table"), {
-    data: privateCompaniesTableData,
-    rowHeaders: false,
-    colHeaders: {{ private_company_colnames | tojson | safe }},
-    enterMoves: {row: 0, col: 1},
-    columns: [
-        {
-            editor: false
-        },
-        {
-            type: "dropdown",
-            allowInvalid: false,
-            source: privateCompanyOwnerSource,
-            width: 170
-        },
-        {
-            allowInvalid: false,
-            source: [],
-            editor: false
-        }
-    ],
-    cells: function (row, col, prop) {
-        var cellProperties = {};
-        if (col === 1) {
-            cellProperties.editor = isEmpty(this.instance.getDataAtCell(row, 0)) ? false : "dropdown";
-        } else if (col === 2) {
-            cellProperties.editor = false;
-            if (row === 0 || row === 1) {
-                cellProperties.type = "dropdown";
-                cellProperties.source = tokenCoordSource(row);
-                cellProperties.editor = isEmpty(this.instance.getDataAtCell(row, 1)) ? false : "dropdown";
-            } else {
-                cellProperties.editor = "text";
-                cellProperties.readOnly = true;
-            }
-        }
-        return cellProperties;
-    },
-    beforeChange: (changes) => {
-        changes.slice().forEach(([row, col, oldValue, newValue], index) => {
-            if (col === 0) {
-                changes.splice(index, 1);
-            }
         });
-    },
-    afterChange: (changes) => {
-        if (changes != null) {
-            var colHeaders = privateCompaniesTable.getColHeader();
-            var ownerColumn = colHeaders.findIndex(header => header == "owner");
-            var coordColumn = colHeaders.findIndex(header => header == "token coordinate");
+}
 
-            changes.forEach(([row, col, oldValue, newValue]) => {
-                if (col === ownerColumn && isEmpty(newValue)) {
-                    privateCompaniesTableData[row][coordColumn] = null;
-                }
-            });
-            privateCompaniesTable.render();
+function populatePrivateCompanyOwnerDropdown(sourceRow) {
+    var dropdownMenu = sourceRow.find(".company-owner .dropdown-menu");
+    dropdownMenu.empty();
 
-            updateLocalStoragePrivateCompanies();
-        }
-    }
-});
+    getRailroads()
+        .forEach(railroad => {
+            dropdownMenu
+                .append($("<a></a>")
+                    .addClass("dropdown-item")
+                    .attr("data-owner", railroad)
+                    .attr("href", "#")
+                    .text(railroad)
+                    .click(function() {
+                        setPrivateCompanyOwner(sourceRow, $(this).attr("data-owner"));
 
-// Handsontable isn't properly displayed due to being hidden. Rendering once it's visible solves the problem.
-$("#railroads-tab").on("shown.bs.tab", function(e) {
-    privateCompaniesTable.render();
-});
+                        sourceRow.find(".company-owner button").focus();
+
+                        updateLocalStoragePrivateCompanies();
+                    }));
+        });
+}
+
+privateCompanyHeaders();
+{%- for name in private_company_rownames %}
+privateCompanyNewRow("{{ name }}");
+{% endfor %}
 
 loadFromLocalStoragePrivateCompanies();
