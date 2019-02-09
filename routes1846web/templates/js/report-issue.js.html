@@ -14,8 +14,8 @@ function gatherGeneralIssueData() {
     return {
         railroadHeaders: JSON.stringify(getRailroadHeaders()),
         railroadData: JSON.stringify(railroadsTable),
-        privateCompaniesHeaders: JSON.stringify(privateCompaniesTable.getColHeader()),
-        privateCompaniesData: JSON.stringify(privateCompaniesTable.getData()),
+        privateCompaniesHeaders: JSON.stringify(getPrivateCompanyHeaders()),
+        privateCompaniesData: JSON.stringify(getPrivateCompaniesAsTable),
         placedTilesHeaders: JSON.stringify(getTilesHeaders()),
         placedTilesData: JSON.stringify(getTilesAsTable())
     };
