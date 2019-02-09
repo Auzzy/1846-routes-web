@@ -60,14 +60,52 @@ function setPrivateCompanyOwner(privateCompanyRow, owner) {
 
 function updateLocalStoragePrivateCompanies() {
     if (typeof(Storage) !== "undefined") {
+        localStorage.privateCompaniesTable = JSON.stringify(getPrivateCompaniesAsTable());
     }
 }
 
 function loadFromLocalStoragePrivateCompanies() {
     if (typeof(Storage) !== "undefined") {
         if (localStorage.privateCompaniesTable !== undefined) {
+            importPrivateCompanies(preparePrivateCompaniesForExport(JSON.parse(localStorage.privateCompaniesTable)));
         }
     }
+}
+
+async function importPrivateCompanies(importText) {
+    var importTableData = [];
+    await Promise.all(importText.trim().split("\n").map(rowStr => {
+        var rowData = rowStr.split(";").map(cell => cell.trim());
+
+        if (!getPrivateCompanyNames().includes(rowData[0]) || isEmpty(rowData[1])) {
+            return;
+        }
+
+        return $.when(
+                $.get("{{ url_for('legal_railroads') }}"),
+                $.get("{{ url_for('legal_token_coords') }}", {companyName: rowData[0]})
+            ).done(function(legalRailroadsResponse, legalTokenCoordsResponse) {
+                if (legalRailroadsResponse[0]["railroads"].includes(rowData[1])
+                        && (isEmpty(rowData[2]) || legalTokenCoordsResponse[0]["coords"].includes(rowData[2]))) {
+                    importTableData.push(rowData);
+                }
+            });
+    }));
+
+    importTableData.forEach(rowData => {
+        var companyName = rowData[0];
+        var tableRow = $(`#private-companies-table tr[data-name='${companyName}']`);
+
+        setPrivateCompanyOwner(tableRow, rowData[1]);
+        if (!isEmpty(rowData[2])) {
+            setPrivateCompanyTokenCoord(tableRow, rowData[2]);
+        }
+    });
+}
+
+function preparePrivateCompaniesForExport(privateCompaniesTable) {
+    privateCompaniesTable = privateCompaniesTable === undefined ? getPrivateCompaniesAsTable() : privateCompaniesTable;
+    return privateCompaniesTable.map(row => row.join("; ")).join("\n");
 }
 
 function privateCompanyHeaders() {

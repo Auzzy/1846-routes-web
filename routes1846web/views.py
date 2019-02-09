@@ -70,8 +70,11 @@ RAILROADS_COLUMN_NAMES = [RAILROADS_COLUMN_MAP[colname] for colname in railroads
 PLACED_TILES_COLUMN_NAMES = [PLACED_TILES_COLUMN_MAP[colname] for colname in boardstate.FIELDNAMES]
 PRIVATE_COMPANY_COLUMN_NAMES = ["name", "owner", "token coordinate"]
 
-SEAPORT_COORDS = [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.port_value]
-MEAT_COORDS = [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.meat_value]
+PRIVATE_COMPANY_COORDS = {
+    "Steamboat Company": [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.port_value],
+    "Meat Packing Company": [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.meat_value],
+    "Mail Contract": []
+}
 
 _BASE_BOARD = board.Board.load()
 
@@ -341,11 +344,8 @@ def legal_token_coords():
 
     LOG.info("Legal %s token coordinate request.", company_name)
 
-    if company_name.lower() == "steamboat company":
-        coords = SEAPORT_COORDS
-    elif company_name.lower() == "meat packing company":
-        coords = MEAT_COORDS
-    else:
+    coords = PRIVATE_COMPANY_COORDS.get(company_name)
+    if coords is None:
         raise ValueError("Received unsupport private company name: {}".format(company_name))
 
     LOG.info("Legal %s token coordinate response: %s", company_name, coords)
