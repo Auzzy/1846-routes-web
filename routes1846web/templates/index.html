@@ -46,6 +46,7 @@
         <div style="float: left;">
             <div style="margin-bottom: 10px;">
                 <h4 style="display: inline">Private Companies</h4>
+                <button id="private-companies-import-export-button" type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#private-companies-import-export-modal" style="margin-left: 10px">Import/Export</button>
             </div>
             <table id="private-companies-table"></table>
         </div>
@@ -96,6 +97,8 @@
 {% include "report-issue-modals.html" %}
 
 {% include "railroads-table-modals.html" %}
+
+{% include "private-companies-table-modals.html" %}
 
 {% endblock %}
 

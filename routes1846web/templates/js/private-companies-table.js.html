@@ -77,7 +77,10 @@ async function importPrivateCompanies(importText) {
     await Promise.all(importText.trim().split("\n").map(rowStr => {
         var rowData = rowStr.split(";").map(cell => cell.trim());
 
-        if (!getPrivateCompanyNames().includes(rowData[0]) || isEmpty(rowData[1])) {
+        if (!getPrivateCompanyNames().includes(rowData[0])) {
+            return;
+        } else if (isEmpty(rowData[1])) {
+            importTableData.push([rowData[0], null, null]);
             return;
         }
 
@@ -244,6 +247,30 @@ function populatePrivateCompanyOwnerDropdown(sourceRow) {
                     }));
         });
 }
+
+$("#private-companies-import-save").click(function() {
+    $("#private-companies-import-save").attr("disabled", true);
+    $("#private-companies-import-export-textarea").attr("readonly", true);
+
+    importPrivateCompanies($("#private-companies-import-export-textarea").val())
+        .then(() => {
+            updateLocalStoragePrivateCompanies();
+            $("#private-companies-import-export-modal").modal("hide");
+        });
+});
+
+$("#private-companies-import-export-modal").on("show.bs.modal", function() {
+    $("#private-companies-import-save").attr("disabled", true);
+    $("#private-companies-import-export-textarea").attr("readonly", true);
+
+    var privateCompaniesTableAsText = preparePrivateCompaniesForExport();
+    $("#private-companies-import-export-textarea").val(privateCompaniesTableAsText);
+
+    $("#private-companies-import-save").attr("disabled", false);
+    $("#private-companies-import-export-textarea").attr("readonly", false);
+
+    enableSubmitViaKeyboard($("#private-companies-import-export-modal"), $("#private-companies-import-save"));
+});
 
 privateCompanyHeaders();
 {%- for name in private_company_rownames %}
