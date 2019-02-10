@@ -3,20 +3,9 @@ var firstCoord = legalCoords[0]
 var lastCoord = legalCoords[legalCoords.length - 1]
 var currentCoordFocus = undefined;
 
-function drawMap() {
-    repositionCanvases();
-
-    var mapCanvas = $("#placed-tiles-board-canvas").get(0);
-    mapCanvas.getContext('2d').clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-
-    getTilesAsTable().forEach(row => {
-        drawTileOnMap(row[0], row[1], row[2]);
-    });
-}
-
 function repositionCanvases() {
     var mapImage = $("#placed-tiles-board").get(0);
-    $("#placed-tiles-board-canvas, #tile-focus-canvas")
+    $("#placed-tiles-board-canvas, #tile-focus-canvas, #stations-canvas")
         .css("position", "absolute")
         .css("left", mapImage.offsetLeft)
         .css("top", mapImage.offsetTop)
@@ -91,6 +80,15 @@ function highlightCoord(coord) {
     keepHighlightVisible(tilePoints);
 }
 
+function drawMap() {
+    var mapCanvas = $("#placed-tiles-board-canvas").get(0);
+    mapCanvas.getContext('2d').clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+
+    getTilesAsTable().forEach(row => {
+        drawTileOnMap(row[0], row[1], row[2]);
+    });
+}
+
 function drawTileOnMap(coord, tileId, orientation) {
     function drawTile(context, tileImage, tileOrigin, mapImg) {
         context.drawImage(tileImage, tileOrigin.x, tileOrigin.y, mapImg.width * 0.088, mapImg.height * 0.121);
@@ -110,7 +108,7 @@ function drawTileOnMap(coord, tileId, orientation) {
 
     var orientationStr = orientation.toString();
     var tileIdStr = tileId.toString().padStart(3, "0");
-    var imgSrc = `{{ url_for('static', filename='images') }}/${tileIdStr}-${orientationStr}.png`;
+    var imgSrc = `{{ url_for('static', filename='images/tiles') }}/${tileIdStr}-${orientationStr}.png`;
 
     var tileImage = new Image();
     tileImage.src = imgSrc;
@@ -143,6 +141,87 @@ function removeTileFromMap(coord) {
     mapContext.closePath();
     mapContext.fill();
     mapContext.globalCompositeOperation = 'source-over';
+}
+
+function drawTokens() {
+    var stationCanvas = $("#stations-canvas").get(0);
+    stationCanvas.getContext('2d').clearRect(0, 0, stationCanvas.width, stationCanvas.height);
+
+    var stationCountByCoord = {};
+    getRailroadsAsTable().forEach(railroad => {
+        if (!isEmpty(railroad[2])) {
+            railroad[2].split(",").forEach(coord => {
+                coord = coord.trim();
+                if (!(coord in stationCountByCoord)) {
+                    stationCountByCoord[coord] = 0;
+                }
+
+                drawStationOnMap(coord, railroad[3], stationCountByCoord[coord], railroad[0]);
+                stationCountByCoord[coord]++;
+            });
+        }
+    });
+}
+
+function drawStationOnMap(coord, chicago, stationCount, railroadName) {
+    var stationCanvas = $("#stations-canvas").get(0);
+    var stationContext = stationCanvas.getContext("2d");
+
+    var rowAndCol = coordToRowAndCol(coord);
+    var tilePoints = getTilePoints(stationCanvas, rowAndCol.row, rowAndCol.col);
+
+    var tileCenter = {
+        x: (Math.max(...tilePoints.map(coord => coord.x)) + Math.min(...tilePoints.map(coord => coord.x))) / 2,
+        y: (Math.max(...tilePoints.map(coord => coord.y)) + Math.min(...tilePoints.map(coord => coord.y))) / 2
+    };
+
+    var imgSrc = `{{ url_for('static', filename='images/tokens') }}/${railroadName}.png`;
+
+    var stationImage = new Image();
+    stationImage.src = imgSrc;
+
+    getTileInfo(coord, (tileInfo) => {
+        // Draws the station after it's loaded...
+        $(stationImage).one("load", function() {
+            drawStation(stationContext, stationImage, tileCenter, stationCount, tileInfo, stationCanvas);
+        });
+
+        // ...as well as if it was already loaded
+        drawStation(stationContext, stationImage, tileCenter, stationCount, tileInfo, stationCanvas);
+    });
+}
+
+function drawStation(context, stationImage, tileCenter, stationCount, tileInfo, mapImg) {
+    var capacity = tileInfo["capacity"];
+    var orientation = tileInfo["orientation"];
+
+    var width = 52 * 0.70;
+    var height = 52 * 0.70;
+
+    var x = 0;
+    var y = 0;
+    if (capacity === 1) {
+        x = tileCenter.x - (width / 2.0);
+        y = tileCenter.y - (height / 2.0);
+    } else if (capacity === 2) {
+        orientation = isEmpty(orientation) ? -0.5 : orientation;
+        var angle = Math.PI / 6 + orientation * Math.PI / 3 + stationCount * Math.PI;
+        var xOffset = -(width / 2 + 3) * Math.cos(angle) - -0 * Math.sin(angle);
+        var yOffset = -(width / 2 + 3) * Math.sin(angle) + -0 * Math.cos(angle);
+
+        x = tileCenter.x - (width / 2) + xOffset;
+        y = tileCenter.y - (height / 2) + yOffset;
+    } else if (capacity === 3) {
+        orientation = isEmpty(orientation) ? -0.5 : orientation;
+        var angle = Math.PI / 3 + orientation * Math.PI / 3 + stationCount * 2 * Math.PI / 3;
+        var xOffset = -(width / 2 + 5) * Math.cos(angle) - -0 * Math.sin(angle);
+        var yOffset = -(width / 2 + 5) * Math.sin(angle) + -0 * Math.cos(angle);
+
+        x = tileCenter.x - (width / 2) + xOffset;
+        y = tileCenter.y - (height / 2) + yOffset;
+    }
+
+    context.drawImage(stationImage, x, y, width, height);
 }
 
 function rowAndColToCoord(rowAndCol) {
@@ -231,6 +310,7 @@ function populateOrientations(sourceTile, coord, tileId) {
 
         placeTile(coord, tileId, orientation);
         drawTileOnMap(coord, tileId, orientation);
+        drawTokens();
 
         $('#tile-selector').modal('hide');
     }
@@ -247,7 +327,7 @@ function populateOrientations(sourceTile, coord, tileId) {
                 var orientation = result["legal-orientations"][index];
                 var orientationStr = orientation.toString();
                 var tileIdStr = tileId.toString().padStart(3, "0");
-                var imgSrc = `{{ url_for('static', filename='images') }}/${tileIdStr}-${orientationStr}.png`;
+                var imgSrc = `{{ url_for('static', filename='images/tiles') }}/${tileIdStr}-${orientationStr}.png`;
 
                 // The img is wrapped in a div because I couldn't draw an outline on the img itself when it received
                 // focus. I am unclear as to why. But I found that letting the div get focus and outlining the img
@@ -338,7 +418,7 @@ function populateModal(coord) {
             for (index in result["legal-tile-ids"]) {
                 var tileId = result["legal-tile-ids"][index];
                 var tileIdStr = tileId.toString().padStart(3, "0");
-                var imgSrc = `{{ url_for('static', filename='images') }}/${tileIdStr}.png`;
+                var imgSrc = `{{ url_for('static', filename='images/tiles') }}/${tileIdStr}.png`;
             
                 var tileImage = $("<img></img>")
                     .attr("src", imgSrc)
@@ -420,6 +500,7 @@ $("#delete-tile-button").click(function(event) {
 
     removeTile(coord);
     removeTileFromMap(coord);
+    drawTokens();
 });
 
 $("#tile-selector").on("show.bs.modal", function() {
@@ -442,8 +523,9 @@ $("#tile-selector").on("hidden.bs.modal", function() {
 
 $("#confirm-clear-map-modal-confirm").click(function() {
     tilesTable = [];
-    drawMap();
     updateLocalStoragePlacedTiles();
+    drawMap();
+    drawTokens();
 });
 
 function importTiles(importText) {
@@ -591,7 +673,11 @@ $("#placed-tiles-board").blur(function() {
     currentCoordFocus = undefined;
 });
 
-$("#placed-tiles-map-tab").on("shown.bs.tab", drawMap);
+$("#placed-tiles-map-tab").on("shown.bs.tab", () => {
+    repositionCanvases();
+    drawMap();
+    drawTokens();
+});
 
 $("#game-board-controls")
     .attr("width", $("#placed-tiles-board").get(0).clientWidth)

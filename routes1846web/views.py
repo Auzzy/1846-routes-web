@@ -241,7 +241,7 @@ def legal_tile_coords():
 @app.route("/board/tile-image")
 def board_tile_image():
     tile_id = request.args.get("tileId")
-    return url_for('static', filename='images/{:03}'.format(int(tile_id)))
+    return url_for('static', filename='images/tiles/{:03}'.format(int(tile_id)))
 
 @app.route("/board/legal-tiles")
 def legal_tiles():
@@ -287,6 +287,19 @@ def legal_orientations():
     LOG.info("Legal orientations response for {} at {} (query: {}): {}".format(tile_id, coord, query, orientations))
 
     return jsonify({"legal-orientations": list(sorted(orientations))})
+
+@app.route("/board/tile-info")
+def board_tile_info():
+    coord = request.args.get("coord")
+    tile_id = request.args.get("tileId")
+
+    tile = tiles.get_tile(tile_id) if tile_id else _BASE_BOARD.get_space(Cell.from_coord(coord))
+
+    info = {
+        "capacity": tile.capacity
+    }
+
+    return jsonify({"info": info})
 
 @app.route("/railroads/legal-railroads")
 def legal_railroads():

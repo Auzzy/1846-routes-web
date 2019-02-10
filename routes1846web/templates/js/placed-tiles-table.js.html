@@ -67,6 +67,17 @@ function removeTile(coord) {
     updateLocalStoragePlacedTiles();
 }
 
+function getTileInfo(coord, callback) {
+    var tile = tilesTable.find(row => row[0] === coord);
+    var tileId = isEmpty(tile) ? null : tile[1];
+    $.get("{{ url_for('board_tile_info') }}", {coord: coord, tileId: tileId})
+        .done(function(response) {
+            var info = response["info"];
+            info["orientation"] = isEmpty(tile) ? null : tile[2];
+            callback(info);
+        });
+}
+
 // Wait until the map has finished loading to draw the saved map. This is likely to kick in if a cache-refresh page
 // reload is issued.
 $("#placed-tiles-board").one("load", loadFromLocalStoragePlacedTiles);

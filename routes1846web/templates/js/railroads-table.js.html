@@ -166,6 +166,8 @@ function importRailroads(importText) {
                 $(`#railroads-table tr[data-railroad='${railroad}']`).remove()
             });
 
+        drawTokens();
+
         $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
     });
 }
@@ -610,6 +612,7 @@ $("#stations-modal-confirm").click(function() {
     var neighbor = $(`#stations-modal-list .active[data-cell='${chicago}']`).attr("data-neighbor");
 
     setRailroadStations($(`#railroads-table tr[data-railroad='${railroad}']`), stations, neighbor);
+    drawTokens();
 
     $("#stations-modal").modal("hide");
 
