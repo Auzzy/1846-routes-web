@@ -21,6 +21,10 @@ function getRailroadsAsTable() {
     return railroadsTableData;
 }
 
+function setRailroadHomeCity(railroadRow, homeCity) {
+    railroadRow.attr("data-home", homeCity);
+}
+
 function setRailroadStations(railroadRow, stations, neighbor) {
     var stationsDisplay = railroadRow.find("td:nth-child(3) .stations");
     stationsDisplay.empty();
@@ -100,6 +104,7 @@ function importRailroads(importText) {
         $.get("{{ url_for('cities') }}"),
         $.get("{{ url_for('chicago_stations') }}")
     ).then((railroadsResponse, trainsResponse, citiesResponse, chicagoNeighborsResponse) => {
+        var homeCities = railroadsResponse[0]["home-cities"];
         var legalRailroads = railroadsResponse[0]["railroads"];
         var legalTrains = trainsResponse[0]["trains"].map(train => train.split("/").map(val => val.trim()).join(" / "));
         var legalStations = citiesResponse[0]["cities"];
@@ -115,13 +120,16 @@ function importRailroads(importText) {
             // normalize train values
             rowData[1] = rowData[1].map(train => train.split("/").map(val => val.trim()).join(" / "));
             // remove duplicates
-            rowData[2] = [...new Set(rowData[2])];
+            rowData[2] = [...new Set(rowData[2].concat(homeCities[rowData[0]]))];
+            // Add home city data
+            rowData.push(homeCities[rowData[0]]);
 
             if (legalRailroads.includes(rowData[0][0])
                     && rowData[1].every(train => legalTrains.includes(train))
                     && rowData[2].every(station => legalStations.includes(station))
                     && ((!rowData[2].includes(chicago) && isEmpty(rowData[3][0]))
-                        || (rowData[2].includes(chicago) && legalChicagoNeighbors.includes(rowData[3][0])))) {
+                        || (rowData[2].includes(chicago) && legalChicagoNeighbors.includes(rowData[3][0])))
+                    && legalStations.includes(rowData[4])) {
                 if (rowData[1].length <= 4 && (isEmpty(rowData[3]) || !chicagoNeighbors.includes(rowData[3]))) {
                     if (!isEmpty(rowData[3])) {
                         chicagoNeighbors.push(rowData[3]);
@@ -132,7 +140,7 @@ function importRailroads(importText) {
         });
 
         return importTableData;
-    }).then(importTableData => {
+    }).then((importTableData, value) => {
         importTableData.forEach(rowData => {
             var railroadName = rowData[0][0];
             var tableRow = $(`#railroads-table tr[data-railroad='${railroadName}']`);
@@ -148,6 +156,7 @@ function importRailroads(importText) {
 
             setRailroadTrains(tableRow, rowData[1]);
             setRailroadStations(tableRow, rowData[2], rowData[3][0]);
+            setRailroadHomeCity(tableRow, rowData[4]);
         });
 
         // Delete railroads which are in the table but not the import block
@@ -299,7 +308,7 @@ function chiacgoPopoverListGroup(railroadName, cityItem) {
                                 $(this).addClass("active");
                             }
                         })
-                            .keydown(function(event) {
+                        .keydown(function(event) {
                             if (event.key === "Tab") {
                                 event.stopImmediatePropagation();
                                 event.preventDefault();
@@ -414,17 +423,19 @@ function populateStationsModal(source) {
                         }
                     });
                 } else {
-                    cityItem.click(function() {
-                        if ($(this).hasClass("active")) {
-                            $(this).removeClass("active");
-                        } else {
-                            $(this).addClass("active");
-                        }
+                    if (cell != $(source).parents("tr").attr("data-home")) {
+                        cityItem.click(function() {
+                            if ($(this).hasClass("active")) {
+                                $(this).removeClass("active");
+                            } else {
+                                $(this).addClass("active");
+                            }
 
-                        if ($("#chicago-neighbor-options .active").length === 0) {
-                            $("#chicago-neighbor-options").parents(".popover").popover("hide");
-                        }
-                    });
+                            if ($("#chicago-neighbor-options .active").length === 0) {
+                                $("#chicago-neighbor-options").parents(".popover").popover("hide");
+                            }
+                        });
+                    }
                 }
 
                 $("#stations-modal-list").append(cityItem);
@@ -544,6 +555,10 @@ function populateRailroadsDropdown(source) {
 
                             addTrainAndStationButtons(nameRow);
                             newRow();
+
+                            var homeCity = result["home-cities"][$(this).attr("data-railroad")];
+                            setRailroadStations(nameRow, [homeCity]);
+                            setRailroadHomeCity(nameRow, homeCity);
 
                             $(nameRow).find(".trains ~ button").focus();
 

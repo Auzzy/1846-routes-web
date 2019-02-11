@@ -210,7 +210,7 @@ def _get_orientations(coord, tile_id):
     cell = Cell.from_coord(coord)
 
     tile = tiles.get_tile(tile_id)
-    
+
     from routes1846.placedtile import PlacedTile
     orientations = []
     for orientation in range(0, 6):
@@ -298,7 +298,10 @@ def legal_railroads():
 
     LOG.info("Legal railroads response: {}".format(legal_railroads))
 
-    return jsonify({"railroads": list(sorted(legal_railroads))})
+    return jsonify({
+        "railroads": list(sorted(legal_railroads)),
+        "home-cities": {railroad: railroads.RAILROAD_HOME_CITIES[railroad] for railroad in legal_railroads}
+    })
 
 @app.route("/railroads/trains")
 def trains():
