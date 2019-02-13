@@ -174,11 +174,17 @@ function drawStationOnMap(coord, chicago, stationCount, railroadName) {
         x: (Math.max(...tilePoints.map(coord => coord.x)) + Math.min(...tilePoints.map(coord => coord.x))) / 2,
         y: (Math.max(...tilePoints.map(coord => coord.y)) + Math.min(...tilePoints.map(coord => coord.y))) / 2
     };
+    var tileSize = {
+        width: Math.max(...tilePoints.map(coord => coord.x)) - Math.min(...tilePoints.map(coord => coord.x)),
+        height: Math.max(...tilePoints.map(coord => coord.y)) - Math.min(...tilePoints.map(coord => coord.y))
+    };
 
     var imgSrc = `{{ url_for('static', filename='images/tokens') }}/${railroadName}.png`;
 
     var stationImage = new Image();
     stationImage.src = imgSrc;
+    stationImage.width = tileSize.width * 0.295
+    stationImage.height = tileSize.height * 0.255
 
     getTileInfo(coord, (tileInfo) => {
         // Draws the station after it's loaded...
@@ -195,33 +201,30 @@ function drawStation(context, stationImage, tileCenter, stationCount, tileInfo, 
     var capacity = tileInfo["capacity"];
     var orientation = tileInfo["orientation"];
 
-    var width = 52 * 0.70;
-    var height = 52 * 0.70;
-
     var x = 0;
     var y = 0;
     if (capacity === 1) {
-        x = tileCenter.x - (width / 2.0);
-        y = tileCenter.y - (height / 2.0);
+        x = tileCenter.x - (stationImage.width / 2.0);
+        y = tileCenter.y - (stationImage.height / 2.0);
     } else if (capacity === 2) {
         orientation = isEmpty(orientation) ? -0.5 : orientation;
         var angle = Math.PI / 6 + orientation * Math.PI / 3 + stationCount * Math.PI;
-        var xOffset = -(width / 2 + 3) * Math.cos(angle) - -0 * Math.sin(angle);
-        var yOffset = -(width / 2 + 3) * Math.sin(angle) + -0 * Math.cos(angle);
+        var xOffset = -(stationImage.width / 2 + 3) * Math.cos(angle) - -0 * Math.sin(angle);
+        var yOffset = -(stationImage.width / 2 + 3) * Math.sin(angle) + -0 * Math.cos(angle);
 
-        x = tileCenter.x - (width / 2) + xOffset;
-        y = tileCenter.y - (height / 2) + yOffset;
+        x = tileCenter.x - (stationImage.width / 2) + xOffset;
+        y = tileCenter.y - (stationImage.height / 2) + yOffset;
     } else if (capacity === 3) {
         orientation = isEmpty(orientation) ? -0.5 : orientation;
         var angle = Math.PI / 3 + orientation * Math.PI / 3 + stationCount * 2 * Math.PI / 3;
-        var xOffset = -(width / 2 + 5) * Math.cos(angle) - -0 * Math.sin(angle);
-        var yOffset = -(width / 2 + 5) * Math.sin(angle) + -0 * Math.cos(angle);
+        var xOffset = -(stationImage.width / 2 + 5) * Math.cos(angle) - -0 * Math.sin(angle);
+        var yOffset = -(stationImage.width / 2 + 5) * Math.sin(angle) + -0 * Math.cos(angle);
 
-        x = tileCenter.x - (width / 2) + xOffset;
-        y = tileCenter.y - (height / 2) + yOffset;
+        x = tileCenter.x - (stationImage.width / 2) + xOffset;
+        y = tileCenter.y - (stationImage.height / 2) + yOffset;
     }
 
-    context.drawImage(stationImage, x, y, width, height);
+    context.drawImage(stationImage, x, y, stationImage.width, stationImage.height);
 }
 
 function rowAndColToCoord(rowAndCol) {
