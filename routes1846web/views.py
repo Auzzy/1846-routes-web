@@ -12,7 +12,7 @@ from rq import Queue
 from routes1846 import board, boardstate, boardtile, find_best_routes, railroads, tiles, LOG as LIB_LOG
 from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell, board_cells
 
-from routes1846web.routes1846web import app, mail
+from routes1846web.routes1846web import app, get_data_file, mail
 from routes1846web.calculator import redis_conn
 from routes1846web.logger import get_logger, init_logger, set_log_format
 
@@ -75,6 +75,9 @@ PRIVATE_COMPANY_COORDS = {
     "Meat Packing Company": [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.meat_value],
     "Mail Contract": []
 }
+
+with open(get_data_file("stations.json")) as stations_file:
+    STATION_DATA = json.load(stations_file)
 
 _BASE_BOARD = board.Board.load()
 
@@ -291,12 +294,20 @@ def legal_orientations():
 @app.route("/board/tile-info")
 def board_tile_info():
     coord = request.args.get("coord")
+    chicago_neighbor = request.args.get("chicagoNeighbor")
     tile_id = request.args.get("tileId")
 
     tile = tiles.get_tile(tile_id) if tile_id else _BASE_BOARD.get_space(Cell.from_coord(coord))
 
+    default_offset = {"x": 0, "y": 0}
+    offset_data = STATION_DATA["tile"] if tile_id else STATION_DATA["board"]
+    offset = offset_data.get(coord, {}).get("offset", default_offset)
+    if chicago_neighbor:
+        offset = offset[chicago_neighbor]
+
     info = {
-        "capacity": tile.capacity
+        "capacity": tile.capacity,
+        "offset": offset
     }
 
     return jsonify({"info": info})

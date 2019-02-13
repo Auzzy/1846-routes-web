@@ -156,7 +156,8 @@ function drawTokens() {
                     stationCountByCoord[coord] = 0;
                 }
 
-                drawStationOnMap(coord, railroad[3], stationCountByCoord[coord], railroad[0]);
+                var chicagoNeighbor = coord === chicago ? railroad[3] : undefined;
+                drawStationOnMap(coord, chicagoNeighbor, stationCountByCoord[coord], railroad[0]);
                 stationCountByCoord[coord]++;
             });
         }
@@ -186,7 +187,7 @@ function drawStationOnMap(coord, chicago, stationCount, railroadName) {
     stationImage.width = tileSize.width * 0.295
     stationImage.height = tileSize.height * 0.255
 
-    getTileInfo(coord, (tileInfo) => {
+    getTileInfo(coord, chicago, (tileInfo) => {
         // Draws the station after it's loaded...
         $(stationImage).one("load", function() {
             drawStation(stationContext, stationImage, tileCenter, stationCount, tileInfo, stationCanvas);
@@ -200,12 +201,14 @@ function drawStationOnMap(coord, chicago, stationCount, railroadName) {
 function drawStation(context, stationImage, tileCenter, stationCount, tileInfo, mapImg) {
     var capacity = tileInfo["capacity"];
     var orientation = tileInfo["orientation"];
+    var offset = tileInfo["offset"];
 
     var x = 0;
     var y = 0;
-    if (capacity === 1) {
-        x = tileCenter.x - (stationImage.width / 2.0);
-        y = tileCenter.y - (stationImage.height / 2.0);
+    if (capacity === 1 || capacity === 4) {
+        // Due to some magic in the tileInfo object, Chiacgo is handled the same as a capcaity 1 tile
+        x = tileCenter.x - (stationImage.width / 2.0) + stationImage.width * offset["x"];
+        y = tileCenter.y - (stationImage.height / 2.0) + stationImage.height * offset["y"];
     } else if (capacity === 2) {
         orientation = isEmpty(orientation) ? -0.5 : orientation;
         var angle = Math.PI / 6 + orientation * Math.PI / 3 + stationCount * Math.PI;
@@ -570,8 +573,9 @@ function importTiles(importText) {
                 coordsInTable.push(row[0]);
                 tilesTable.push(row);
             });
-            
+
             drawMap();
+            drawTokens();
         });
 }
 
