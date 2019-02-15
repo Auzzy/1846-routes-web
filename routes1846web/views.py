@@ -9,7 +9,7 @@ from flask import jsonify, render_template, request
 from flask_mail import Message
 from rq import Queue
 
-from routes1846 import board, boardstate, boardtile, find_best_routes, railroads, tiles, LOG as LIB_LOG
+from routes1846 import board, boardstate, boardtile, find_best_routes, private_companies, railroads, tiles, LOG as LIB_LOG
 from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell, board_cells
 
 from routes1846web.routes1846web import app, get_data_file, mail
@@ -48,6 +48,12 @@ RAILROADS_COLUMN_MAP = {
     "chicago_station_exit_coord": "chicago station side"
 }
 
+PRIVATE_COMPANY_COLUMN_MAP = {
+    "name": "name",
+    "owner": "owner",
+    "coord": "token coordinate"
+}
+
 PLACED_TILES_COLUMN_MAP = {
     "coord": "coordinate",
     "tile_id": "tile",
@@ -60,19 +66,13 @@ PRIVATE_COMPANIES = (
     "Mail Contract"
 )
 
-PRIVATE_COMPANY_TO_COLUMN = {
-    "Steamboat Company": "port_coord",
-    "Meat Packing Company": "meat_packing_coord",
-    "Mail Contract": "has_mail_contract"
-}
-
-RAILROADS_COLUMN_NAMES = [RAILROADS_COLUMN_MAP[colname] for colname in railroads.RAILROAD_FIELDNAMES]
+RAILROADS_COLUMN_NAMES = [RAILROADS_COLUMN_MAP[colname] for colname in railroads.FIELDNAMES]
 PLACED_TILES_COLUMN_NAMES = [PLACED_TILES_COLUMN_MAP[colname] for colname in boardstate.FIELDNAMES]
-PRIVATE_COMPANY_COLUMN_NAMES = ["name", "owner", "token coordinate"]
+PRIVATE_COMPANY_COLUMN_NAMES = [PRIVATE_COMPANY_COLUMN_MAP[colname] for colname in private_companies.FIELDNAMES]
 
 PRIVATE_COMPANY_COORDS = {
-    "Steamboat Company": [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.port_value],
-    "Meat Packing Company": [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.meat_value],
+    "Steamboat Company": private_companies.STEAMBOAT_COORDS,
+    "Meat Packing Company": private_companies.MEAT_PACKING_COORDS,
     "Mail Contract": []
 }
 
@@ -105,24 +105,6 @@ def main():
             private_company_colnames=PRIVATE_COMPANY_COLUMN_NAMES,
             placed_tiles_colnames=PLACED_TILES_COLUMN_NAMES,
             tile_coords=get_tile_coords())
-
-def _build_railroad_rows(railroads_state_rows, private_companies_rows):
-    railroad_rows = []
-    for railroad_row in railroads_state_rows:
-        railroad_name = railroad_row[railroads.RAILROAD_FIELDNAMES.index("name")]
-        if any(val for val in railroad_row):
-            railroad_private_companies = [None] * len(PRIVATE_COMPANIES)
-            for private_row in private_companies_rows:
-                row = railroads.PRIVATE_COMPANY_FIELDNAMES.index(PRIVATE_COMPANY_TO_COLUMN[private_row[PRIVATE_COMPANY_COLUMN_NAMES.index("name")]])
-                company_owner = private_row[PRIVATE_COMPANY_COLUMN_NAMES.index("owner")]
-                if company_owner and railroad_name == company_owner:
-                    company_name = private_row[PRIVATE_COMPANY_COLUMN_NAMES.index("name")]
-                    token_coord = private_row[PRIVATE_COMPANY_COLUMN_NAMES.index("token coordinate")]
-                    railroad_private_companies[row] = True if company_name.lower() == "mail contract" else token_coord
-            railroad_row.extend(railroad_private_companies)
-            railroad_rows.append(dict(zip(railroads.FIELDNAMES, railroad_row)))
-
-    return railroad_rows
 
 @app.route("/calculate", methods=["POST"])
 def calculate():
@@ -195,7 +177,8 @@ def cancel_calculate_request():
 
 def calculate_worker(railroads_state_rows, private_companies_rows, board_state_rows, railroad_name):
     board = boardstate.load([dict(zip(boardstate.FIELDNAMES, row)) for row in board_state_rows if any(val for val in row)])
-    railroad_dict = railroads.load(board, _build_railroad_rows(railroads_state_rows, private_companies_rows))
+    railroad_dict = railroads.load(board, [dict(zip(railroads.FIELDNAMES, row)) for row in railroads_state_rows if any(val for val in row)])
+    private_companies.load(board, railroad_dict, [dict(zip(private_companies.FIELDNAMES, row)) for row in private_companies_rows if any(val for val in row)])
     board.validate()
 
     if railroad_name not in railroad_dict:
