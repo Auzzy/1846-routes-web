@@ -25,6 +25,29 @@ function setRailroadHomeCity(railroadRow, homeCity) {
     railroadRow.attr("data-home", homeCity);
 }
 
+function addRailroadStation(railroadRow, station, neighbor) {
+    getRailroadsAsTable().forEach(railroad => {
+        if (railroad[0] !== railroadRow.attr("data-railroad")) {
+            return;
+        }
+
+        var stations = [...new Set(railroad[2].split(",").map(coord => coord.trim()).concat(station))];
+        setRailroadStations(railroadRow, stations, neighbor);
+    });
+}
+
+function removeRailroadStation(railroadRow, station) {
+    getRailroadsAsTable().forEach(railroad => {
+        if (railroad[0] !== railroadRow.attr("data-railroad")) {
+            return;
+        }
+
+        var stations = railroad[2].split(",").filter(coord => coord !== station);
+        var neighbor = station === chicago ? null : railroadRow.attr("data-neighbor");
+        setRailroadStations(railroadRow, stations, neighbor);
+    });
+}
+
 function setRailroadStations(railroadRow, stations, neighbor) {
     var stationsDisplay = railroadRow.find("td:nth-child(3) .stations");
     stationsDisplay.empty();
@@ -425,7 +448,12 @@ function populateStationsModal(source) {
                         }
                     });
                 } else {
-                    if (cell != $(source).parents("tr").attr("data-home")) {
+                    var uneditableStations = [
+                        $(source).parents("tr").attr("data-home"),
+                        $(source).parents("tr").attr("data-big-4"),
+                        $(source).parents("tr").attr("data-michigan-southern")
+                    ].filter(value => !isEmpty(value));
+                    if (!uneditableStations.includes(cell)) {
                         cityItem.click(function() {
                             if ($(this).hasClass("active")) {
                                 $(this).removeClass("active");

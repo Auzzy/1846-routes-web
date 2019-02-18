@@ -63,7 +63,9 @@ PLACED_TILES_COLUMN_MAP = {
 PRIVATE_COMPANIES = (
     "Steamboat Company",
     "Meat Packing Company",
-    "Mail Contract"
+    "Mail Contract",
+    "Big 4",
+    "Michigan Southern"
 )
 
 RAILROADS_COLUMN_NAMES = [RAILROADS_COLUMN_MAP[colname] for colname in railroads.FIELDNAMES]
@@ -73,7 +75,9 @@ PRIVATE_COMPANY_COLUMN_NAMES = [PRIVATE_COMPANY_COLUMN_MAP[colname] for colname 
 PRIVATE_COMPANY_COORDS = {
     "Steamboat Company": private_companies.STEAMBOAT_COORDS,
     "Meat Packing Company": private_companies.MEAT_PACKING_COORDS,
-    "Mail Contract": []
+    "Mail Contract": [],
+    "Big 4": [private_companies.HOME_CITIES["Big 4"]],
+    "Michigan Southern": [private_companies.HOME_CITIES["Michigan Southern"]]
 }
 
 with open(get_data_file("stations.json")) as stations_file:
@@ -101,6 +105,7 @@ def get_tile_coords():
 def main():
     return render_template("index.html",
             railroads_colnames=RAILROADS_COLUMN_NAMES,
+            independent_railroad_home_cities=private_companies.HOME_CITIES,
             private_company_rownames=PRIVATE_COMPANIES,
             private_company_colnames=PRIVATE_COMPANY_COLUMN_NAMES,
             placed_tiles_colnames=PLACED_TILES_COLUMN_NAMES,

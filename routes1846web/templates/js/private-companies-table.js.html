@@ -19,6 +19,13 @@ function getPrivateCompaniesAsTable() {
 }
 
 function setPrivateCompanyTokenCoord(privateCompanyRow, tokenCoord) {
+    var companyName = privateCompanyRow.attr("data-name");
+    if (companyName === "Big 4") {
+        tokenCoord = "{{ independent_railroad_home_cities['Big 4'] }}";
+    } else if (companyName === "Michigan Southern") {
+        tokenCoord = "{{ independent_railroad_home_cities['Michigan Southern'] }}";
+    }
+
     var tokenDisplay = privateCompanyRow.find(".company-token .display");
     tokenDisplay.empty();
 
@@ -35,7 +42,26 @@ function setPrivateCompanyTokenCoord(privateCompanyRow, tokenCoord) {
     privateCompanyRow.attr("data-coord", tokenDisplay.attr("data-coord"));
 }
 
+function setIndependentRailroadOwner(privateCompanyRow, indRailroadName, owner) {
+    var attrName = indRailroadName === "Big 4" ? "data-big-4" : "data-michigan-southern";
+    var previousOwnerRow = $(`#railroads-table tr[${attrName}]`);
+    removeRailroadStation(previousOwnerRow, previousOwnerRow.attr(attrName));
+    previousOwnerRow.removeAttr(attrName);
+
+    if (!isEmpty(owner)) {
+        var railroadRow = $(`#railroads-table tr[data-railroad='${owner}']`);
+        var coord = privateCompanyRow.attr("data-coord");
+        addRailroadStation(railroadRow, coord);
+        railroadRow.attr(attrName, coord);
+    }
+}
+
 function setPrivateCompanyOwner(privateCompanyRow, owner) {
+    var companyName = privateCompanyRow.attr("data-name");
+    if (["Big 4", "Michigan Southern"].includes(companyName)) {
+        setIndependentRailroadOwner(privateCompanyRow, companyName, owner);
+    }
+
     var ownerDisplay = privateCompanyRow.find(".company-owner .display");
     ownerDisplay.empty();
 
@@ -52,8 +78,9 @@ function setPrivateCompanyOwner(privateCompanyRow, owner) {
         .html(owner);
     privateCompanyRow.attr("data-owner", ownerDisplay.attr("data-owner"));
 
+    // This is fine, because setPrivateCompanyTokenCoord can't change independent railroad coords.
     setPrivateCompanyTokenCoord(privateCompanyRow, null);
-    if (privateCompanyRow.attr("data-name") !== "Mail Contract") {
+    if (["Steamboat Company", "Meat Packing Company"].includes(companyName)) {
         privateCompanyRow.find(".company-token button").show();
     }
 }
@@ -197,6 +224,7 @@ function privateCompanyNewRow(companyName) {
                         setPrivateCompanyTokenCoord(sourceRow, null);
                         setPrivateCompanyOwner(sourceRow, null);
                         updateLocalStoragePrivateCompanies();
+                        updateLocalStorageRailroads();
                     })));
 }
 
@@ -244,6 +272,7 @@ function populatePrivateCompanyOwnerDropdown(sourceRow) {
                         sourceRow.find(".company-owner button").focus();
 
                         updateLocalStoragePrivateCompanies();
+                        updateLocalStorageRailroads();
                     }));
         });
 }
@@ -275,6 +304,9 @@ $("#private-companies-import-export-modal").on("show.bs.modal", function() {
 privateCompanyHeaders();
 {%- for name in private_company_rownames %}
 privateCompanyNewRow("{{ name }}");
+{% if name in ["Big 4", "Michigan Southern"] -%}
+setPrivateCompanyTokenCoord($("#private-companies-table tr[data-name='{{ name }}']"), "{{ independent_railroad_home_cities[name] }}");
+{%- endif -%}
 {% endfor %}
 
 loadFromLocalStoragePrivateCompanies();
