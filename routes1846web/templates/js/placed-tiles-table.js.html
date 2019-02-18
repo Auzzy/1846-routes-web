@@ -10,14 +10,14 @@ function getTilesHeaders() {
 
 function updateLocalStoragePlacedTiles() {
     if (typeof(Storage) !== "undefined") {
-        localStorage.placedTilesTable = JSON.stringify(getTilesAsTable().filter(row => !row.every(isEmpty)));
+        localStorage.placedTilesTable = JSON.stringify(getTilesAsTable().filter(row => !row.every(isEmpty)).map(row => row.map(value => value.toString())));
     }
 }
 
 function loadFromLocalStoragePlacedTiles() {
     if (typeof(Storage) !== "undefined") {
         if (localStorage.placedTilesTable !== undefined) {
-            tilesTable = JSON.parse(localStorage.placedTilesTable);
+            tilesTable = JSON.parse(localStorage.placedTilesTable).map(row => row.map(value => value.toString()));
             drawMap();
             drawTokens();
         }
@@ -43,11 +43,17 @@ function findRowByCoord(coord) {
 }
 
 function placeTile(coord, tileId, orientation) {
+    tileId = tileId.toString();
+    orientation = orientation.toString();
+
     if (tilesTable.some(row => row[0] === coord && row[1] === tileId && row[2] === orientation)) {
         return;
     }
 
-    var row = findRowByCoord(coord) || findNextEmptyRow()
+    var row = findRowByCoord(coord);
+    if (row === null) {
+        row = findNextEmptyRow();
+    }
     if (row === null) {
         tilesTable.push([coord, tileId, orientation]);
     } else {
@@ -58,12 +64,10 @@ function placeTile(coord, tileId, orientation) {
 }
 
 function removeTile(coord) {
-    var row = findRowByCoord(coord);
-    if (row === null) {
-        return;
+    var row;
+    while ((row = findRowByCoord(coord)) !== null) {
+        tilesTable.splice(row, 1);
     }
-
-    tilesTable.splice(row, 1);
 
     updateLocalStoragePlacedTiles();
 }

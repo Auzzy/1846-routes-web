@@ -571,7 +571,7 @@ function importTiles(importText) {
                 }
 
                 coordsInTable.push(row[0]);
-                tilesTable.push(row);
+                tilesTable.push(row.map(value => value.toString()));
             });
 
             drawMap();
