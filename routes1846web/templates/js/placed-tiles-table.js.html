@@ -17,7 +17,7 @@ function updateLocalStoragePlacedTiles() {
 function loadFromLocalStoragePlacedTiles() {
     if (typeof(Storage) !== "undefined") {
         if (localStorage.placedTilesTable !== undefined) {
-            tilesTable = JSON.parse(localStorage.placedTilesTable).map(row => row.map(value => value.toString()));
+            importTiles(prepareTilesForExport(JSON.parse(localStorage.placedTilesTable)));
             drawMap();
             drawTokens();
         }
