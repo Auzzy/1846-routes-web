@@ -300,6 +300,26 @@ def board_tile_info():
 
     return jsonify({"info": info})
 
+@app.route("/board/phase")
+def board_phase():
+    LOG.info("Phase request")
+
+    train_strs = json.loads(request.args.get("trains"))
+    if train_strs:
+        phases = []
+        for train_str in train_strs:
+            try:
+                phases.append(railroads.Train.create(train_str).phase)
+            except ValueError:
+                continue
+        phase = max(phases)
+    else:
+        phase = 1
+
+    LOG.info("Phase: %s", phase)
+
+    return jsonify({"phase": phase})
+
 @app.route("/railroads/legal-railroads")
 def legal_railroads():
     LOG.info("Legal railroads request.")

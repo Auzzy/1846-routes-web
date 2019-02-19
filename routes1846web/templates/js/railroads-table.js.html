@@ -25,13 +25,14 @@ function setRailroadHomeCity(railroadRow, homeCity) {
     railroadRow.attr("data-home", homeCity);
 }
 
-function addRailroadStation(railroadRow, station, neighbor) {
+function addRailroadStation(railroadRow, newStation, newNeighbor) {
     getRailroadsAsTable().forEach(railroad => {
         if (railroad[0] !== railroadRow.attr("data-railroad")) {
             return;
         }
 
-        var stations = [...new Set(railroad[2].split(",").map(coord => coord.trim()).concat(station))];
+        var stations = [...new Set(railroad[2].split(",").map(coord => coord.trim()).concat(newStation))];
+        var neighbor = !isEmpty(newNeighbor) && newStation == chicago ? newNeighbor : railroad[3];
         setRailroadStations(railroadRow, stations, neighbor);
     });
 }

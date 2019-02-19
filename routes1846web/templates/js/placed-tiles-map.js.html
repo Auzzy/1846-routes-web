@@ -162,6 +162,28 @@ function drawTokens() {
             });
         }
     });
+
+    var allTrains = new Array().concat(...getRailroadsAsTable().map(railroad => {
+        return isEmpty(railroad[1]) ? [] : railroad[1].split(",").map(value => value.trim());
+    }));
+    $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
+        .done(result => {
+            if (result["phase"] < 3) {
+                getPrivateCompaniesAsTable().forEach(company => {
+                    if (["Big 4", "Michigan Southern"].includes(company[0])) {
+                        if (isEmpty(company[1])) {
+                            var coord = company[2].trim();
+                            if (!(coord in stationCountByCoord)) {
+                                stationCountByCoord[coord] = 0;
+                            }
+
+                            drawStationOnMap(coord, null, stationCountByCoord[coord], company[0]);
+                            stationCountByCoord[coord]++;
+                        }
+                    }
+                });
+            }
+        });
 }
 
 function drawStationOnMap(coord, chicago, stationCount, railroadName) {

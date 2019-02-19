@@ -131,6 +131,8 @@ async function importPrivateCompanies(importText) {
             setPrivateCompanyTokenCoord(tableRow, rowData[2]);
         }
     });
+
+    drawTokens();
 }
 
 function preparePrivateCompaniesForExport(privateCompaniesTable) {
