@@ -5,28 +5,16 @@
     <span style="display: inline-block; font-size: 2rem; font-family: inherit; font-weight: 500;">1846 Route Calculator</span>
     <span>&nbsp;</span>
     <button type="button" class="btn btn-sm btn-outline-info align-middle align-text-bottom" data-toggle="modal" data-target="#aboutModal">About</button>
+    <button id="general-report-issue-open" class="float-right btn btn-outline-danger" data-toggle="modal" data-target="#general-report-issue-modal" style="margin-right: 25px;">Report Issue</button>
 </div>
-<ul class="nav nav-tabs" id="routes-tabs" role="tablist">
-    <li class="nav-item">
-        <a class="nav-link active" id="placed-tiles-map-tab" data-toggle="tab" href="#placed-tiles-map-content" role="tab" aria-controls="placed-tiles-map" aria-selected="true">Place Tiles</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" id="railroads-tab" data-toggle="tab" href="#railroads-content" role="tab" aria-controls="railroads" aria-selected="false">Railroads</a>
-    </li>
-    <li>
-        <button id="calculate-submit" class="btn btn-success" data-toggle="modal" data-target="#routeModal" style="margin-left:10px;">Calculate</button>
-    </li>
-    <li class="ml-auto">
-        <button id="general-report-issue-open" class="btn btn-outline-danger" data-toggle="modal" data-target="#general-report-issue-modal" style="margin-right: 25px;">Report Issue</button>
-    </li>
-</ul>
 
-<div class="tab-content" id="routes-tabs-content" style="margin-left: 50px; margin-top: 30px;">
-    <div class="tab-pane fade show active" id="placed-tiles-map-content" role="tabpanel" aria-labelledby="placed-tiles-map-tab">
+<div>
+    <div id="map-section" style="float: left;">
         <div id="game-board-controls" style="margin-bottom: 10px;">
             <button id="game-board-controls-clear" type="button" class="btn btn-outline-danger" data-toggle="modal" data-target="#confirm-clear-map-modal">Clear Map</button>
             <!-- <div style="float: left; width: 20px;">&nbsp;</div> -->
             <button id="tiles-import-export-button" type="button" class="btn btn btn-outline-primary" data-toggle="modal" data-target="#tiles-import-export-modal" style="margin-left: 20px">Import/Export</button>
+            <button id="calculate-submit" class="btn btn-success" data-toggle="modal" data-target="#routeModal" style="margin-left:10px;">Calculate</button>
         </div>
         <div id="game-board">
             <img tabindex="0" id="placed-tiles-board" src="{{ url_for('static', filename='images/1846-Map.png') }}" />
@@ -35,22 +23,19 @@
             <canvas id="tile-focus-canvas"></canvas>
         </div>
     </div>
-    <div class="tab-pane fade" id="railroads-content" role="tabpanel" aria-labelledby="railroads-tab">
-        <div style="float: left;">
-            <div style="margin-bottom: 10px;">
-                <h4 style="display: inline">Railroads</h4>
-                <button id="railroads-import-export-button" type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#railroads-import-export-modal" style="margin-left: 10px">Import/Export</button>
-            </div>
-            <table id="railroads-table"></table>
+    <div style="float: left; width: 2%;">&nbsp;</div>
+    <div id="entry-section" style="float: left;">
+        <div style="margin-bottom: 10px;">
+            <h4 style="display: inline">Private Companies</h4>
+            <button id="private-companies-import-export-button" type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#private-companies-import-export-modal" style="margin-left: 10px">Import/Export</button>
         </div>
-        <div style="float: left; width: 100px;">&nbsp;</div>
-        <div style="float: left;">
-            <div style="margin-bottom: 10px;">
-                <h4 style="display: inline">Private Companies</h4>
-                <button id="private-companies-import-export-button" type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#private-companies-import-export-modal" style="margin-left: 10px">Import/Export</button>
-            </div>
-            <table id="private-companies-table"></table>
+        <table id="private-companies-table"></table>
+        <div style="height: 30px;">&nbsp;</div>
+        <div style="margin-bottom: 10px;">
+            <h4 style="display: inline">Railroads</h4>
+            <button id="railroads-import-export-button" type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#railroads-import-export-modal" style="margin-left: 10px">Import/Export</button>
         </div>
+        <table id="railroads-table"></table>
     </div>
 </div>
 
@@ -107,6 +92,19 @@
 function isEmpty(value) {
     return value === '' || value === null || value === undefined;
 }
+
+// Scale the map to fit on the screen
+$("#placed-tiles-board").height("100%").css("height", "-=" + $("#placed-tiles-board").offset().top);
+
+// Scale the private companies and railroads to fit on the map's right, unless its width is too small.
+var remainingSpace = window.innerWidth - $("#placed-tiles-board").width();
+if (remainingSpace < 300) {
+    $("#entry-section").before($("<br />"));
+    $("#entry-section").width(window.innerWidth - 50);
+} else {
+    $("#entry-section").width(remainingSpace - 50);
+}
+
 
 {% include "js/placed-tiles-map.js.html" %}
 
