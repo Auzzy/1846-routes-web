@@ -810,30 +810,6 @@ function prepareTilesForExport(exportTilesTable) {
     return exportTilesTable.map(row => row.join("; ")).join("\n");
 }
 
-$("#tiles-import-save").click(function() {
-    $("#tiles-import-save").attr("disabled", true);
-    $("#til-import-export-textarea").attr("readonly", true);
-
-    importTiles($("#tiles-import-export-textarea").val())
-        .done(() => {
-            updateLocalStoragePlacedTiles();
-            $("#tiles-import-export-modal").modal("hide");
-        });
-});
-
-$("#tiles-import-export-modal").on("show.bs.modal", function() {
-    $("#tiles-import-save").attr("disabled", true);
-    $("#tiles-import-export-textarea").attr("readonly", true);
-
-    var tilesTableAsText = prepareTilesForExport();
-    $("#tiles-import-export-textarea").val("").val(tilesTableAsText);
-
-    $("#tiles-import-save").attr("disabled", false);
-    $("#tiles-import-export-textarea").attr("readonly", false);
-
-    enableSubmitViaKeyboard($("#tiles-import-export-modal"), $("#tiles-import-save"));
-});
-
 $("#placed-tiles-board").focus(function(event) {
     if (currentCoordFocus === undefined) {
         // This condition only seems to be true if focus is coming from SHIFT+TAB, maybe because it's the final element

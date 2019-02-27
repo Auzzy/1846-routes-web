@@ -676,30 +676,6 @@ $("#stations-modal-confirm").click(function() {
     updateLocalStorageRailroads();
 });
 
-$("#railroads-import-save").click(function() {
-    $("#railroads-import-save").attr("disabled", true);
-    $("#railroads-import-export-textarea").attr("readonly", true);
-
-    importRailroads($("#railroads-import-export-textarea").val())
-        .done(() => {
-            updateLocalStorageRailroads();
-            $("#railroads-import-export-modal").modal("hide");
-        });
-});
-
-$("#railroads-import-export-modal").on("show.bs.modal", function() {
-    $("#railroads-import-save").attr("disabled", true);
-    $("#railroads-import-export-textarea").attr("readonly", true);
-
-    var railroadsTableAsText = prepareRailroadsForExport();
-    $("#railroads-import-export-textarea").val(railroadsTableAsText);
-
-    $("#railroads-import-save").attr("disabled", false);
-    $("#railroads-import-export-textarea").attr("readonly", false);
-
-    enableSubmitViaKeyboard($("#railroads-import-export-modal"), $("#railroads-import-save"));
-});
-
 // I am unclear why this button propogates its transitionend event to its parent modal. But as it interferes with the
 // behavior of the station modal (specifically, the special handling of Chicago), the event must be slienced.
 $("#stations-modal-confirm").on("webkitTransitionEnd otransitionend oTransitionEnd msTransitionEnd transitionend", event => {

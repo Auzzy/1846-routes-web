@@ -35,33 +35,3 @@
         </div>
     </div>
 </div>
-
-<div class="modal fade" id="railroads-import-export-modal" tabindex="-1" role="dialog" aria-labelledby="railroads-import-export-modal" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Railroads Import/Export</h2>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>
-                    Use the text area below to import or modify the railroads table. You can also copy the text for later.
-                </p>
-                <p>
-                    Each line corresponds to a line in the table. Each line consists of the railroad's name, trains,
-                    stations, and Chicago neighbor (in that order), all spearated by semi-colons. The trains and
-                    stations are lists of values separated by commas.
-                </p>
-                <p>
-                    For example: "Grand Trunk; 3/5, 4; D6; C7".
-                </p>
-                <textarea id="railroads-import-export-textarea" style="width: 100%;" rows="7"></textarea>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" type="button" id="railroads-import-save">Save</button>
-            </div>
-        </div>
-    </div>
-</div>
