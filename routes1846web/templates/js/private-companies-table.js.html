@@ -236,6 +236,9 @@ function privateCompanyNewRow(companyName) {
                     .addClass("oi oi-delete"))
                     .click(function() {
                         removePrivateCompany($(this).parents("tr").attr("data-name"));
+                        if (indRailroadNames.includes(sourceRow.attr("data-name"))) {
+                            drawTokens();
+                        }
                     })));
 }
 
@@ -298,6 +301,10 @@ function populatePrivateCompanyOwnerDropdown(sourceRow) {
                     .text(railroad)
                     .click(function() {
                         setPrivateCompanyOwner(sourceRow, $(this).attr("data-owner"));
+
+                        if (indRailroadNames.includes(sourceRow.attr("data-name"))) {
+                            drawTokens();
+                        }
 
                         sourceRow.find(".company-owner button").focus();
 

@@ -305,6 +305,8 @@ function addTrainAndStationButtons(rowElement) {
                 .addClass("oi oi-delete"))
                 .click(function() {
                     $(this).parents("tr").remove();
+                    drawTokens();
+
                     $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
                     removeAllPrivateCompanies(company => company[1] === $(this).parents("tr").attr("data-railroad"));
                     updateLocalStorageRailroads();
@@ -616,6 +618,8 @@ function populateRailroadsDropdown(source) {
                             var homeCity = result["home-cities"][$(this).attr("data-railroad")];
                             setRailroadStations(nameRow, [homeCity]);
                             setRailroadHomeCity(nameRow, homeCity);
+
+                            drawTokens();
 
                             $(nameRow).find(".trains ~ button").focus();
 
