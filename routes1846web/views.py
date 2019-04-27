@@ -164,7 +164,8 @@ def _get_calculate_result(job_id):
                 routes_json["routes"].append([
                     str(route.train),
                     [str(space.cell) for space in route],
-                    route.value
+                    route.value,
+                    [(city.name, route.city_values[city]) for city in route.visited_cities]
                 ])
         else:
             # The job is in progress
