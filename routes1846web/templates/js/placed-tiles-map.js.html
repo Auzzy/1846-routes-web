@@ -2,6 +2,7 @@ var legalCoords = {{ tile_coords | safe }};
 var firstCoord = legalCoords[0]
 var lastCoord = legalCoords[legalCoords.length - 1]
 var currentCoordFocus = undefined;
+var cityNames = {{ city_names | safe }}
 
 function repositionCanvases() {
     var mapImage = $("#placed-tiles-board").get(0);
@@ -434,9 +435,13 @@ function populateModal(coord) {
         $(source).addClass("active");
     }
 
-    $("#tileSelectorLabel").text(coord.toString());
+    if (cityNames.hasOwnProperty(coord)) {
+        $("#tileSelectorLabel").text(cityNames[coord] + " (" + coord + ")");
+    } else {
+        $("#tileSelectorLabel").text(coord);
+    }
 
-    $("#delete-tile-button").attr("data-coord", coord.toString());
+    $("#delete-tile-button").attr("data-coord", coord);
 
     $.get("{{ url_for('legal_tiles') }}", {coord: coord})
         .done(function(result) {

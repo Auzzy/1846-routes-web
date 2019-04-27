@@ -103,13 +103,20 @@ def get_tile_coords():
 
 @app.route("/")
 def main():
+    city_names = {}
+    for cell in board_cells():
+        space = _BASE_BOARD.get_space(cell)
+        if space:
+            city_names[str(cell)] = space.name
+
     return render_template("index.html",
             railroads_colnames=RAILROADS_COLUMN_NAMES,
             independent_railroad_home_cities=private_companies.HOME_CITIES,
             private_company_rownames=PRIVATE_COMPANIES,
             private_company_colnames=PRIVATE_COMPANY_COLUMN_NAMES,
             placed_tiles_colnames=PLACED_TILES_COLUMN_NAMES,
-            tile_coords=get_tile_coords())
+            tile_coords=get_tile_coords(),
+            city_names=city_names)
 
 @app.route("/calculate", methods=["POST"])
 def calculate():
