@@ -36,9 +36,11 @@ function setPrivateCompanyTokenCoord(privateCompanyRow, tokenCoord) {
         return;
     }
 
+    var tokenHtml = `${cityNames[tokenCoord]} (${tokenCoord})`;
+
     tokenDisplay
         .attr("data-coord", tokenCoord)
-        .html(tokenCoord);
+        .html(tokenHtml);
     privateCompanyRow.attr("data-coord", tokenDisplay.attr("data-coord"));
 }
 
@@ -151,7 +153,7 @@ function privateCompanyHeaders() {
                 .css("width", 200)
                 .text("Owner"))
             .append($("<th></th>")
-                .css("width", 75)
+                .css("width", 180)
                 .text("Token")));
 }
 
@@ -191,7 +193,7 @@ function privateCompanyNewRow(companyName) {
                         populatePrivateCompanyOwnerDropdown($(this).parents("tr"));
                     })))
             .append($("<td></td>")
-                .css("width", 75)
+                .css("width", 180)
                 .append($("<div></div>")
                     .addClass("dropdown")
                     .addClass("company-token")
@@ -217,7 +219,7 @@ function privateCompanyNewRow(companyName) {
                     })))
             .append($("<button></button>")
                 .addClass("btn btn-outline-danger")
-                .css("margin-left", 50)
+                .css("margin-left", 10)
                 .attr("type", "button")
                 .append($("<span></span>")
                     .addClass("oi oi-delete"))
@@ -238,12 +240,13 @@ function populatePrivateCompanyTokenCoordDropdown(sourceRow) {
     $.get("{{ url_for('legal_token_coords') }}", {companyName: companyName})
         .done(function(result) {
             result["coords"].forEach(tokenCoord => {
+                var itemHtml = `${cityNames[tokenCoord]} (${tokenCoord})`;
                 dropdownMenu
                     .append($("<a></a>")
                         .addClass("dropdown-item")
                         .attr("data-coord", tokenCoord)
                         .attr("href", "#")
-                        .text(tokenCoord)
+                        .text(itemHtml)
                         .click(function() {
                             setPrivateCompanyTokenCoord(sourceRow, $(this).attr("data-coord"));
 

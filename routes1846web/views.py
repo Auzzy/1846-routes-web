@@ -107,7 +107,10 @@ def main():
     for cell in board_cells():
         space = _BASE_BOARD.get_space(cell)
         if space:
-            city_names[str(cell)] = space.name
+            # Its such a long name that it makes layout trickier, and looks
+            # worse in comparison to others city names.
+            name = "Chicago Conn." if space.name == "Chicago Connections" else space.name
+            city_names[str(cell)] = name
 
     return render_template("index.html",
             railroads_colnames=RAILROADS_COLUMN_NAMES,
