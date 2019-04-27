@@ -63,8 +63,10 @@ function setRailroadStations(railroadRow, stations, neighbor) {
     }
 
     var stationsHtml = stations.map(cell => {
-        return cell + (cell === chicago && neighbor ? ` (${neighbor})` : "");
-    }).join("<br />");
+        var displayNeighbor = (cell === chicago && neighbor ? ` [${neighbor}]` : "");
+        var displayStation = cityNames[cell] + displayNeighbor + ` (${cell}) `;
+        return $("<div></div>").text(displayStation).css("line-height", "1.5em");
+    });
 
     stationsDisplay
         .attr("data-stations", stations.join(","))
@@ -212,7 +214,7 @@ function headers() {
                 .css("width", 75)
                 .text("Trains"))
             .append($("<th></th>")
-                .css("width", 75)
+                .css("width", 150)
                 .text("Stations")));
 }
 
@@ -263,7 +265,7 @@ function addTrainAndStationButtons(rowElement) {
                 .append($("<span></span>")
                     .addClass("oi oi-pencil"))))
         .append($("<td></td>")
-            .css("width", 100)
+            .css("width", 175)
             .append($("<div></div>")
                 .addClass("stations")
                 .attr("data-railroad", $(rowElement).attr("data-railroad"))
@@ -372,11 +374,12 @@ function populateStationsModal(source) {
     $.get("{{ url_for('cities') }}")
         .done(function(result) {
             result["cities"].forEach(cell => {
+                var cityItemText = (cityNames.hasOwnProperty(cell) ? cityNames[cell] : cell) + ` (${cell})`;
                 var cityItem = $("<button></button>")
                     .addClass("list-group-item list-group-item-action")
                     .attr("type", "button")
                     .attr("data-cell", cell)
-                    .text(cell);
+                    .text(cityItemText);
 
                 if (cell === chicago) {
                     var neighborPopoverListGroup = chiacgoPopoverListGroup(railroad, cityItem);
