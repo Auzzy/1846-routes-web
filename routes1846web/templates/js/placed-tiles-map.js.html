@@ -370,7 +370,7 @@ function populateOrientations(sourceTile, coord, tileId) {
             $("#tile-orientations").empty();
 
             // Reset the tile orientation viewport
-            $("#tile-orientations").offset({"top": $("#tile-selector-modal-body").offset().top});
+            $("#tile-orientations").offset({"top": $("#tile-selector-tiles-content").offset().top});
 
             for (index in result["legal-orientations"]) {
                 var orientation = result["legal-orientations"][index];
@@ -443,7 +443,7 @@ function populateOrientations(sourceTile, coord, tileId) {
         });
 }
 
-function populateModal(coord) {
+function populateTiles(coord) {
     function selectTile(source) {
         $("#tile-options").children().each(function (index, element) {
             if (element != source) {
@@ -456,7 +456,7 @@ function populateModal(coord) {
         populateOrientations(source, $(source).attr("data-coord"), $(source).attr("data-tile-id"))
             .done(function() {
                 $("#tile-orientations").children().first().focus();
-                scrollTopHidden($("#tile-selector"), $("#tile-selector-modal-body"), $(source).index() * 98);
+                scrollTopHidden($("#tile-selector"), $("#tile-selector-tiles-content"), $(source).index() * 98);
 
                 var orientationTileNum = $("#tile-orientations > .active").index();
                 $("#tile-orientations")
@@ -545,8 +545,8 @@ function keepOnScreen(viewport, content) {
     }
 }
 
-$("#tile-selector-modal-body").scroll(function(event) {
-    keepOnScreen($("#tile-selector-modal-body"), $("#tile-orientations"));
+$("#tile-selector-tiles-content").scroll(function(event) {
+    keepOnScreen($("#tile-selector-tiles-content"), $("#tile-orientations"));
 });
 
 function openTileSelectionModal(rowAndCol) {
@@ -555,7 +555,9 @@ function openTileSelectionModal(rowAndCol) {
         if (legalCoords.includes(coord)) {
             clearAllHighlights();
             highlightCoord(coord);
-            populateModal(coord);
+            populateTiles(coord);
+            
+            $("#tile-selector-tiles").click();
             $('#tile-selector').attr("data-coord", coord);
             $('#tile-selector').modal('show');
         }
@@ -580,12 +582,12 @@ $("#delete-tile-button").click(function(event) {
 
 $("#tile-selector").on("show.bs.modal", function() {
     // Hack to get around scrollTop only working on visible elements.
-    scrollTopHidden($("#tile-selector"), $("#tile-selector-modal-body"), 0);
-    keepOnScreen($("#tile-selector-modal-body"), $("#tile-orientations"));
+    scrollTopHidden($("#tile-selector"), $("#tile-selector-tiles-content"), 0);
+    keepOnScreen($("#tile-selector-tiles-content"), $("#tile-orientations"));
 });
 
 $("#tile-selector").on("shown.bs.modal", function() {
-    keepOnScreen($("#tile-selector-modal-body"), $("#tile-orientations"));
+    keepOnScreen($("#tile-selector-tiles-content"), $("#tile-orientations"));
 });
 
 $("#tile-selector").on("hidden.bs.modal", function() {
