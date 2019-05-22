@@ -207,8 +207,8 @@ function drawStationOnMap(coord, chicago, stationCount, railroadName) {
 
     var stationImage = new Image();
     stationImage.src = imgSrc;
-    stationImage.width = tileSize.width * 0.295
-    stationImage.height = tileSize.height * 0.255
+    stationImage.width = tileSize.width * 0.295;
+    stationImage.height = tileSize.height * 0.255;
 
     getTileInfo(coord, chicago, (tileInfo) => {
         // Draws the station after it's loaded...
@@ -305,6 +305,28 @@ function mapPointToTile(img, point) {
             }
         }
     }
+}
+
+function populateStations(coord) {
+    var railroadsAtCoord = getRailroadsAsTable().filter(railroad => {
+        return !isEmpty(railroad[2]) &&
+            railroad[2].split(",").find(stationCoord => coord === stationCoord.trim()) !== undefined;
+    }).map(railroad => railroad[0]);
+
+    $("#tile-stations").empty();
+
+    Array.from(new Set(railroadsAtCoord)).forEach(railroadName => {
+        $("#tile-selector-stations-content")
+            .append($("<div></div>")
+                .css("padding", "5px 0px")
+                .append($("<img></img>")
+                    .attr("src", `{{ url_for('static', filename='images/tokens') }}/${railroadName}.png`)
+                    .attr("height", 25)
+                    .attr("width", 25)
+                    .css("margin-right", 5))
+                .append($("<span></span>")
+                    .text(railroadName)));
+    });
 }
 
 function scrollTopHidden(parent, scrollItem, scrollOffset) {
@@ -556,7 +578,9 @@ function openTileSelectionModal(rowAndCol) {
             clearAllHighlights();
             highlightCoord(coord);
             populateTiles(coord);
-            
+            populateStations(coord);
+
+            // Ensure the modal always shows tiles when opened
             $("#tile-selector-tiles").click();
             $('#tile-selector').attr("data-coord", coord);
             $('#tile-selector').modal('show');
