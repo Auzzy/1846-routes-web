@@ -62,6 +62,12 @@ function setRailroadStations(railroadRow, stations, neighbor) {
         return;
     }
 
+    // Ensure the railroad's home station is always set
+    var homeStation = railroadRow.attr("data-home");
+    if (!isEmpty(homeStation) && !stations.includes(homeStation)) {
+        stations.push(homeStation);
+    }
+
     var stationsHtml = stations.map(cell => {
         var displayNeighbor = (cell === chicago && neighbor ? ` [${neighbor}]` : "");
         var displayStation = cityNames[cell] + displayNeighbor + ` (${cell}) `;
