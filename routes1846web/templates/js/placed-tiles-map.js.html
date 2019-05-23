@@ -314,6 +314,7 @@ function populateStations(coord) {
     }).map(railroad => railroad[0]);
 
     $("#tile-stations").empty();
+    $("#add-tile-stations").empty();
 
     if (cityNames.hasOwnProperty(coord)) {
         $("#tile-selector-stations").show();
@@ -323,17 +324,82 @@ function populateStations(coord) {
     }
 
     Array.from(new Set(railroadsAtCoord)).forEach(railroadName => {
-        $("#tile-selector-stations-content")
-            .append($("<div></div>")
-                .css("padding", "5px 0px")
-                .append($("<img></img>")
-                    .attr("src", `{{ url_for('static', filename='images/tokens') }}/${railroadName}.png`)
-                    .attr("height", 25)
-                    .attr("width", 25)
-                    .css("margin-right", 5))
-                .append($("<span></span>")
-                    .text(railroadName)));
+        var stationEntry = $("<div></div>")
+            .css("padding", "10px 0px")
+            .append($("<img></img>")
+                .attr("src", `{{ url_for('static', filename='images/tokens') }}/${railroadName}.png`)
+                .attr("height", 25)
+                .attr("width", 25)
+                .css("margin-right", 5))
+            .append($("<span></span>")
+                .text(railroadName));
+
+        var railroadRow = getRailroadRow(railroadName);
+        if (railroadRow.attr("data-home") !== coord) {
+            stationEntry
+                .append($("<button></button>")
+                    .addClass("btn btn-sm btn-outline-danger")
+                    .css("margin-left", 10)
+                    .attr("type", "button")
+                    .append($("<span></span>")
+                        .addClass("oi oi-delete"))
+                    .click(function() {
+                        removeRailroadStation(railroadRow, coord);
+                        populateStations(coord);
+                        drawTokens();
+
+                        updateLocalStorageRailroads();
+                    }));
+        }
+
+        $("#tile-stations").append(stationEntry);
     });
+
+    if (cityNames.hasOwnProperty(coord)) {
+        $("#add-tile-stations")
+            .append($("<div></div>")
+                .addClass("dropdown")
+                .append($("<button></button>")
+                    .addClass("btn btn-outline-success dropdown-toggle")
+                    .attr("type", "button")
+                    .attr("data-toggle", "dropdown")
+                    .attr("aria-haspopup", "true")
+                    .attr("aria-expanded", "false")
+                    .append($("<span></span>")
+                        .addClass("oi oi-plus")))
+                .append($("<div></div>")
+                    .addClass("dropdown-menu"))
+                .on("show.bs.dropdown", function() {
+                    populateTileSelectorStationDropdown($("#add-tile-stations"), coord);
+                }));
+    }
+}
+
+function populateTileSelectorStationDropdown(sourceRow, coord) {
+    var dropdownMenu = sourceRow.find(".dropdown-menu");
+    dropdownMenu.empty();
+
+    getRailroadsAsTable()
+        .forEach(railroad => {
+            if (railroad[2].split(",").includes(coord)) {
+                return
+            }
+
+            dropdownMenu
+                .append($("<a></a>")
+                    .addClass("dropdown-item")
+                    .attr("data-owner", railroad[0])
+                    .attr("href", "#")
+                    .text(railroad[0])
+                    .click(function() {
+                        var row = getRailroadRow(railroad[0]);
+                        addRailroadStation(row, coord);
+                        populateStations(coord);
+                        drawTokens();
+
+                        updateLocalStorageRailroads();
+                    }));
+        });
 }
 
 function scrollTopHidden(parent, scrollItem, scrollOffset) {

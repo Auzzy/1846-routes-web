@@ -21,6 +21,10 @@ function getRailroadsAsTable() {
     return railroadsTableData;
 }
 
+function getRailroadRow(railroadName) {
+    return $(`#railroads-table tr[data-railroad='${railroadName}']`);
+}
+
 function setRailroadHomeCity(railroadRow, homeCity) {
     railroadRow.attr("data-home", homeCity);
 }
