@@ -307,11 +307,62 @@ function mapPointToTile(img, point) {
     }
 }
 
+function placeStationButton(parent, coord, neighbor) {
+    parent
+        .append($("<span></span>")
+            .addClass("dropdown")
+            .append($("<button></button>")
+                .addClass("btn btn-outline-success dropdown-toggle")
+                .attr("type", "button")
+                .attr("data-toggle", "dropdown")
+                .attr("aria-haspopup", "true")
+                .attr("aria-expanded", "false")
+                .append($("<span></span>")
+                    .addClass("oi oi-plus")))
+            .append($("<div></div>")
+                .addClass("dropdown-menu"))
+            .on("show.bs.dropdown", function() {
+                populateTileSelectorStationDropdown(parent, coord, neighbor);
+            }));
+}
+
+function tileModalStationEntry(coord, railroadName) {
+    var stationEntry = $("<div></div>")
+        .css("padding", "10px 0px")
+        .append($("<img></img>")
+            .attr("src", `{{ url_for('static', filename='images/tokens') }}/${railroadName}.png`)
+            .attr("height", 25)
+            .attr("width", 25)
+            .css("margin-right", 5))
+        .append($("<span></span>")
+            .text(railroadName));
+
+    var railroadRow = getRailroadRow(railroadName);
+    if (railroadRow.attr("data-home") !== coord) {
+        stationEntry
+            .append($("<button></button>")
+                .addClass("btn btn-sm btn-outline-danger")
+                .css("margin-left", 10)
+                .attr("type", "button")
+                .append($("<span></span>")
+                    .addClass("oi oi-delete"))
+                .click(function() {
+                    removeRailroadStation(railroadRow, coord);
+                    populateStations(coord);
+                    drawTokens();
+
+                    updateLocalStorageRailroads();
+                }));
+    }
+
+    return stationEntry;
+}
+
 function populateStations(coord) {
     var railroadsAtCoord = getRailroadsAsTable().filter(railroad => {
         return !isEmpty(railroad[2]) &&
             railroad[2].split(",").find(stationCoord => coord === stationCoord.trim()) !== undefined;
-    }).map(railroad => railroad[0]);
+    });
 
     $("#tile-stations").empty();
     $("#add-tile-stations").empty();
@@ -323,59 +374,41 @@ function populateStations(coord) {
         return;
     }
 
-    Array.from(new Set(railroadsAtCoord)).forEach(railroadName => {
-        var stationEntry = $("<div></div>")
-            .css("padding", "10px 0px")
-            .append($("<img></img>")
-                .attr("src", `{{ url_for('static', filename='images/tokens') }}/${railroadName}.png`)
-                .attr("height", 25)
-                .attr("width", 25)
-                .css("margin-right", 5))
-            .append($("<span></span>")
-                .text(railroadName));
+    if (coord == chicago) {
+        $.get("{{ url_for('chicago_stations') }}")
+            .done(response => {
+                response["chicago-stations"].forEach(neighbor => {
+                    var railroad = getRailroadsAsTable().find(railroadEntry => neighbor === railroadEntry[3]);
+                    var stationEntry = null;
+                    if (railroad === undefined) {
+                        stationEntry = $("<div></div>").css("padding", "10px 0px");
+                    } else {
+                        stationEntry = tileModalStationEntry(coord, railroad[0]);
+                    }
 
-        var railroadRow = getRailroadRow(railroadName);
-        if (railroadRow.attr("data-home") !== coord) {
-            stationEntry
-                .append($("<button></button>")
-                    .addClass("btn btn-sm btn-outline-danger")
-                    .css("margin-left", 10)
-                    .attr("type", "button")
-                    .append($("<span></span>")
-                        .addClass("oi oi-delete"))
-                    .click(function() {
-                        removeRailroadStation(railroadRow, coord);
-                        populateStations(coord);
-                        drawTokens();
+                    $("#tile-stations").append(
+                        stationEntry
+                            .prepend($("<span></span>")
+                                .css("margin-right", 5)
+                                .css("font-weight", "bold")
+                                .css("font-size", "1.25em")
+                                .text(neighbor)));
 
-                        updateLocalStorageRailroads();
-                    }));
-        }
+                    if (railroad === undefined) {
+                        placeStationButton(stationEntry, coord, neighbor);
+                    }
+                });
+            });
+    } else if (cityNames.hasOwnProperty(coord)) {
+        Array.from(new Set(railroadsAtCoord)).forEach(railroad => {
+            $("#tile-stations").append(tileModalStationEntry(coord, railroad[0]));
+        });
 
-        $("#tile-stations").append(stationEntry);
-    });
-
-    if (cityNames.hasOwnProperty(coord)) {
-        $("#add-tile-stations")
-            .append($("<div></div>")
-                .addClass("dropdown")
-                .append($("<button></button>")
-                    .addClass("btn btn-outline-success dropdown-toggle")
-                    .attr("type", "button")
-                    .attr("data-toggle", "dropdown")
-                    .attr("aria-haspopup", "true")
-                    .attr("aria-expanded", "false")
-                    .append($("<span></span>")
-                        .addClass("oi oi-plus")))
-                .append($("<div></div>")
-                    .addClass("dropdown-menu"))
-                .on("show.bs.dropdown", function() {
-                    populateTileSelectorStationDropdown($("#add-tile-stations"), coord);
-                }));
+        placeStationButton($("#add-tile-stations"), coord);
     }
 }
 
-function populateTileSelectorStationDropdown(sourceRow, coord) {
+function populateTileSelectorStationDropdown(sourceRow, coord, neighbor) {
     var dropdownMenu = sourceRow.find(".dropdown-menu");
     dropdownMenu.empty();
 
@@ -393,7 +426,7 @@ function populateTileSelectorStationDropdown(sourceRow, coord) {
                     .text(railroad[0])
                     .click(function() {
                         var row = getRailroadRow(railroad[0]);
-                        addRailroadStation(row, coord);
+                        addRailroadStation(row, coord, neighbor);
                         populateStations(coord);
                         drawTokens();
 
