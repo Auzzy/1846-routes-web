@@ -315,6 +315,13 @@ function populateStations(coord) {
 
     $("#tile-stations").empty();
 
+    if (cityNames.hasOwnProperty(coord)) {
+        $("#tile-selector-stations").show();
+    } else {
+        $("#tile-selector-stations").hide();
+        return;
+    }
+
     Array.from(new Set(railroadsAtCoord)).forEach(railroadName => {
         $("#tile-selector-stations-content")
             .append($("<div></div>")
