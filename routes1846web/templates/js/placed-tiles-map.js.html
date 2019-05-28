@@ -645,8 +645,17 @@ function populateTiles(coord) {
                             }
                         }
                     });
-              
+
                 $("#tile-options").append(setOpacity(tileImage, 1));
+            }
+
+            if (result["legal-tile-ids"].length === 0) {
+                $("#tile-selector-tiles").hide();
+                if (cityNames.hasOwnProperty(coord)) {
+                    $("#tile-selector-stations").click();
+                }
+            } else {
+                $("#tile-selector-tiles").show();
             }
         })
         .done(function() {

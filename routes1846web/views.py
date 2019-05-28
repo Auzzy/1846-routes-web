@@ -96,7 +96,9 @@ def get_tile_coords():
             for col in sorted(cols):
                 coord = "{}{}".format(row, col)
                 space = _get_space(coord)
-                if not space or (space.phase is not None and space.phase < 4):
+                # Explicitly allow I5 in order to allow placing stations from the map. Allowing all built-in phase 4
+                # tiles to be clickable would require some more special casing, so I determined this is "better"...
+                if not space or space.phase is not None or coord == "I5":
                     tile_coords.append(coord)
         _TILE_COORDS = tile_coords
     return _TILE_COORDS
@@ -253,6 +255,9 @@ def legal_tiles():
     LOG.info("Legal tiles request for {} (query: {}).".format(coord, query))
 
     space = _get_space(coord)
+    # If the coord is a built-in phase 4 tile
+    if space and space.phase is None:
+        return jsonify({"legal-tile-ids": []})
 
     from routes1846 import tiles
     legal_tile_ids = []
