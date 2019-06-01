@@ -339,7 +339,9 @@ function tileModalStationEntry(coord, railroadName) {
 
     var railroadRow = getRailroadRow(railroadName);
     var indRailroadCoords = getIndependentRailroadsAsTable()
-        .filter(railroad => railroad[0] === railroadName)
+        // If the railroad entry either is an independent railroad, or the owner
+        // of an independent railroad, that station's location should be uneditable.
+        .filter(railroad => [railroad[0], railroad[1]].includes(railroadName))
         .map(railroad => railroad[2]);
     var uneditableStations = indRailroadCoords.concat([railroadRow.attr("data-home")]);
     if (!uneditableStations.includes(coord)) {
