@@ -338,7 +338,11 @@ function tileModalStationEntry(coord, railroadName) {
             .text(railroadName));
 
     var railroadRow = getRailroadRow(railroadName);
-    if (railroadRow.attr("data-home") !== coord) {
+    var indRailroadCoords = getIndependentRailroadsAsTable()
+        .filter(railroad => railroad[0] === railroadName)
+        .map(railroad => railroad[2]);
+    var uneditableStations = indRailroadCoords.concat([railroadRow.attr("data-home")]);
+    if (!uneditableStations.includes(coord)) {
         stationEntry
             .append($("<button></button>")
                 .addClass("btn btn-sm btn-outline-danger")
@@ -359,53 +363,66 @@ function tileModalStationEntry(coord, railroadName) {
 }
 
 function populateStations(coord) {
-    var railroadsAtCoord = getRailroadsAsTable().filter(railroad => {
-        return !isEmpty(railroad[2]) &&
-            railroad[2].split(",").find(stationCoord => coord === stationCoord.trim()) !== undefined;
-    });
-
-    $("#tile-stations").empty();
-    $("#add-tile-stations").empty();
-
-    if (cityNames.hasOwnProperty(coord)) {
-        $("#tile-selector-stations").show();
-    } else {
-        $("#tile-selector-stations").hide();
-        return;
-    }
-
-    if (coord == chicago) {
-        $.get("{{ url_for('chicago_stations') }}")
-            .done(response => {
-                response["chicago-stations"].forEach(neighbor => {
-                    var railroad = getRailroadsAsTable().find(railroadEntry => neighbor === railroadEntry[3]);
-                    var stationEntry = null;
-                    if (railroad === undefined) {
-                        stationEntry = $("<div></div>").css("padding", "10px 0px");
-                    } else {
-                        stationEntry = tileModalStationEntry(coord, railroad[0]);
-                    }
-
-                    $("#tile-stations").append(
-                        stationEntry
-                            .prepend($("<span></span>")
-                                .css("margin-right", 5)
-                                .css("font-weight", "bold")
-                                .css("font-size", "1.25em")
-                                .text(neighbor)));
-
-                    if (railroad === undefined) {
-                        placeStationButton(stationEntry, coord, neighbor);
-                    }
+    var allTrains = new Array().concat(...getRailroadsAsTable().map(railroad => {
+        return isEmpty(railroad[1]) ? [] : railroad[1].split(",").map(value => value.trim());
+    }));
+    $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
+        .done(result => {
+            var railroadsAtCoord = getRailroadsAsTable();
+            if (result["phase"] < 3) {
+                railroadsAtCoord = railroadsAtCoord
+                    .concat(getIndependentRailroadsAsTable()
+                        .filter(railroad => isEmpty(railroad[1])));
+            }
+            railroadsAtCoord = railroadsAtCoord
+                .filter(railroad => {
+                    return !isEmpty(railroad[2]) &&
+                        railroad[2].split(",").find(stationCoord => coord === stationCoord.trim()) !== undefined;
                 });
-            });
-    } else if (cityNames.hasOwnProperty(coord)) {
-        Array.from(new Set(railroadsAtCoord)).forEach(railroad => {
-            $("#tile-stations").append(tileModalStationEntry(coord, railroad[0]));
-        });
 
-        placeStationButton($("#add-tile-stations"), coord);
-    }
+            $("#tile-stations").empty();
+            $("#add-tile-stations").empty();
+
+            if (cityNames.hasOwnProperty(coord)) {
+                $("#tile-selector-stations").show();
+            } else {
+                $("#tile-selector-stations").hide();
+                return;
+            }
+
+            if (coord == chicago) {
+                $.get("{{ url_for('chicago_stations') }}")
+                    .done(response => {
+                        response["chicago-stations"].forEach(neighbor => {
+                            var railroad = getRailroadsAsTable().find(railroadEntry => neighbor === railroadEntry[3]);
+                            var stationEntry = null;
+                            if (railroad === undefined) {
+                                stationEntry = $("<div></div>").css("padding", "10px 0px");
+                            } else {
+                                stationEntry = tileModalStationEntry(coord, railroad[0]);
+                            }
+
+                            $("#tile-stations").append(
+                                stationEntry
+                                    .prepend($("<span></span>")
+                                        .css("margin-right", 5)
+                                        .css("font-weight", "bold")
+                                        .css("font-size", "1.25em")
+                                        .text(neighbor)));
+
+                            if (railroad === undefined) {
+                                placeStationButton(stationEntry, coord, neighbor);
+                            }
+                        });
+                    });
+            } else if (cityNames.hasOwnProperty(coord)) {
+                Array.from(new Set(railroadsAtCoord)).forEach(railroad => {
+                    $("#tile-stations").append(tileModalStationEntry(coord, railroad[0]));
+                });
+
+                placeStationButton($("#add-tile-stations"), coord);
+            }
+        });
 }
 
 function populateTileSelectorStationDropdown(sourceRow, coord, neighbor) {
