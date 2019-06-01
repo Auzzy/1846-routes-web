@@ -72,6 +72,12 @@ function setRailroadStations(railroadRow, stations, neighbor) {
         stations.push(homeStation);
     }
 
+    // Ensure that if they own any independent railroads, they're always included.
+    var independentRailroads = getIndependentRailroadsAsTable()
+        .filter(railroad => railroad[1] === railroadRow.attr("data-railroad"))
+        .map(railroad => railroad[2]);
+    stations = [...new Set(stations.concat(independentRailroads))];
+
     var stationsHtml = stations.map(cell => {
         var displayNeighbor = (cell === chicago && neighbor ? ` [${neighbor}]` : "");
         var displayStation = cityNames[cell] + displayNeighbor + ` (${cell}) `;
@@ -462,11 +468,17 @@ function populateStationsModal(source) {
                         }
                     });
                 } else {
-                    var uneditableStations = [
-                        $(source).parents("tr").attr("data-home"),
-                        $(source).parents("tr").attr("data-big-4"),
-                        $(source).parents("tr").attr("data-michigan-southern")
-                    ].filter(value => !isEmpty(value));
+                    var independentRailroads = getIndependentRailroadsAsTable()
+                        .filter(company => company[1] === railroad)
+                        .map(railroad => railroad[2]);
+                    var uneditableStations = independentRailroads
+                        .concat([
+                            $(source).parents("tr").attr("data-home"),
+                            $(source).parents("tr").attr("data-big-4"),
+                            $(source).parents("tr").attr("data-michigan-southern")
+                        ])
+                        .filter(value => !isEmpty(value));
+
                     if (!uneditableStations.includes(cell)) {
                         cityItem.click(function() {
                             if ($(this).hasClass("active")) {
