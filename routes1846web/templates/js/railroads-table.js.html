@@ -208,6 +208,7 @@ function importRailroads(importText) {
                 $(`#railroads-table tr[data-railroad='${railroad}']`).remove()
             });
 
+        removeAllPrivateCompanies(company => !getRailroads().includes(company[1]))
         drawTokens();
 
         $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
@@ -305,7 +306,7 @@ function addTrainAndStationButtons(rowElement) {
                 .click(function() {
                     $(this).parents("tr").remove();
                     $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
-
+                    removeAllPrivateCompanies(company => company[1] === $(this).parents("tr").attr("data-railroad"));
                     updateLocalStorageRailroads();
                 }));
 }

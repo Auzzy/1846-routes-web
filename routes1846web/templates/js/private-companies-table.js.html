@@ -21,6 +21,10 @@ function getPrivateCompaniesAsTable() {
     return privateCompanyTableData;
 }
 
+function getPrivateCompanyRow(companyName) {
+    return $(`#private-companies-table tr[data-name='${companyName}']`);
+}
+
 function getIndependentRailroadsAsTable() {
     return getPrivateCompaniesAsTable().filter(company => indRailroadNames.includes(company[0]));
 }
@@ -231,12 +235,26 @@ function privateCompanyNewRow(companyName) {
                 .append($("<span></span>")
                     .addClass("oi oi-delete"))
                     .click(function() {
-                        var sourceRow = $(this).parents("tr");
-                        setPrivateCompanyTokenCoord(sourceRow, null);
-                        setPrivateCompanyOwner(sourceRow, null);
-                        updateLocalStoragePrivateCompanies();
-                        updateLocalStorageRailroads();
+                        removePrivateCompany($(this).parents("tr").attr("data-name"));
                     })));
+}
+
+function removePrivateCompany(companyName) {
+    var sourceRow = getPrivateCompanyRow(companyName);
+    setPrivateCompanyTokenCoord(sourceRow, null);
+    setPrivateCompanyOwner(sourceRow, null);
+    updateLocalStoragePrivateCompanies();
+    updateLocalStorageRailroads();
+}
+
+function removeAllPrivateCompanies(predicate) {
+    if (isEmpty(predicate)) {
+        return;
+    }
+
+    getPrivateCompaniesAsTable()
+        .filter(company => !isEmpty(company[1]) && predicate(company))
+        .forEach(company => removePrivateCompany(company[0]));
 }
 
 function populatePrivateCompanyTokenCoordDropdown(sourceRow) {
