@@ -1,3 +1,6 @@
+{% set indRailroadNames = ["Big 4", "Michigan Southern"] %}
+var indRailroadNames = {{ indRailroadNames|safe }};
+
 function getPrivateCompaniesHeaders() {
     return $("#private-companies-table th").map((index, header) => $(header).text().toLowerCase()).toArray();
 }
@@ -16,6 +19,10 @@ function getPrivateCompaniesAsTable() {
         ]);
     });
     return privateCompanyTableData;
+}
+
+function getIndependentRailroadsAsTable() {
+    return getPrivateCompaniesAsTable().filter(company => indRailroadNames.includes(company[0]));
 }
 
 function setPrivateCompanyTokenCoord(privateCompanyRow, tokenCoord) {
@@ -60,7 +67,7 @@ function setIndependentRailroadOwner(privateCompanyRow, indRailroadName, owner) 
 
 function setPrivateCompanyOwner(privateCompanyRow, owner) {
     var companyName = privateCompanyRow.attr("data-name");
-    if (["Big 4", "Michigan Southern"].includes(companyName)) {
+    if (indRailroadNames.includes(companyName)) {
         setIndependentRailroadOwner(privateCompanyRow, companyName, owner);
     }
 
@@ -309,7 +316,7 @@ $("#private-companies-import-export-modal").on("show.bs.modal", function() {
 privateCompanyHeaders();
 {%- for name in private_company_rownames %}
 privateCompanyNewRow("{{ name }}");
-{% if name in ["Big 4", "Michigan Southern"] -%}
+{% if name in indRailroadNames -%}
 setPrivateCompanyTokenCoord($("#private-companies-table tr[data-name='{{ name }}']"), "{{ independent_railroad_home_cities[name] }}");
 {%- endif -%}
 {% endfor %}

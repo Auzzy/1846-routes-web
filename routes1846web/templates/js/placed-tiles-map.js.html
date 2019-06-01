@@ -171,7 +171,7 @@ function drawTokens() {
         .done(result => {
             if (result["phase"] < 3) {
                 getPrivateCompaniesAsTable().forEach(company => {
-                    if (["Big 4", "Michigan Southern"].includes(company[0])) {
+                    if (indRailroadNames.includes(company[0])) {
                         if (isEmpty(company[1])) {
                             var coord = company[2].trim();
                             if (!(coord in stationCountByCoord)) {
