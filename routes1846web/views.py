@@ -220,6 +220,7 @@ def _get_orientations(coord, tile_id):
     for orientation in range(0, 6):
         try:
             _BASE_BOARD._validate_place_tile_neighbors(cell, tile, orientation)
+            _BASE_BOARD._validate_place_tile_upgrade(_get_space(coord), cell, tile, orientation)
         except ValueError:
             continue
 
