@@ -24,8 +24,8 @@ function gatherGeneralIssueData() {
 function gatherCalcIssueData() {
     var issueData = gatherGeneralIssueData();
     $.extend(true, issueData, {
-        targetRailroad: $("#railroad-name").val(),
-        jobId: $("#routeModal").data("jobId")
+        targetRailroad: $("#calculate-dropdown").attr("data-selected"),
+        jobId: $("#calculate-tab-content").data("jobId")
     });
     return issueData;
 }
@@ -122,15 +122,15 @@ function reportModal(modalName) {
 }
 
 $("#general-report-issue-submit").click(function() {
-    var reportData = gatherGeneralIssueData();
-    reportData.subject = "general issue";
-    reportIssue("general-report-issue", reportData, "{{ url_for('report_general_issue') }}");
-});
-
-$("#calc-report-issue-submit").click(function() {
-    var reportData = gatherCalcIssueData();
-    reportData.subject = "route calculation issue";
-    reportIssue("calc-report-issue", reportData, "{{ url_for('report_calc_issue') }}");
+    if ($("#calculate-tab-content").hasClass("active")) {
+        var reportData = gatherCalcIssueData();
+        reportData.subject = "route calculation issue";
+        reportIssue("calc-report-issue", reportData, "{{ url_for('report_calc_issue') }}");
+    } else {
+        var reportData = gatherGeneralIssueData();
+        reportData.subject = "general issue";
+        reportIssue("general-report-issue", reportData, "{{ url_for('report_general_issue') }}");
+    }
 });
 
 $("#tile-report-issue-submit").click(function() {
@@ -140,6 +140,5 @@ $("#tile-report-issue-submit").click(function() {
 });
 
 
-reportModal("calc-report-issue");
 reportModal("general-report-issue");
 reportModal("tile-report-issue");

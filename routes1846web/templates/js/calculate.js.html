@@ -1,31 +1,40 @@
-$("#routeModal").on("show.bs.modal", function () {
-    $("#calculate-modal-body").empty();
-    $("#railroad-name")[0].selectedIndex = -1;
-
-    $("#railroad-name").empty();
-    $("#railroad-name").append($("<option></option>"));  // Empty, pre-selected option
+$("#calculate-dropdown").on("show.bs.dropdown", function () {
+    $("#calculate-dropdown").removeAttr("data-selected");
+    $("#calculate-dropdown-menu").empty();
 
     var railroadsTable = getRailroadsAsTable();
     for (index in railroadsTable) {
         var row = railroadsTable[index];
         if (railroadRowReady(row)) {
-            $("#railroad-name").append(
-                $("<option></option>")
-                    .attr("name", row[0])
-                    .text(row[0]));
+            $("#calculate-dropdown-menu")
+                .append($("<a></a>")
+                    .addClass("dropdown-item")
+                    .attr("href", "#")
+                    .attr("data-name", row[0])
+                    .text(row[0])
+                    .click(function(e) {
+                        $("#calculate-dropdown").attr("data-selected", $(e.target).attr("data-name"));
+                        $("#best-routes-name").text($("#calculate-dropdown").attr("data-selected"));
+
+                        $("#config-tabs").find(".active").removeClass("active");
+                        $("#config-tabs-content").find(".active").removeClass("active show");
+                        $("#calculate-tab-content").addClass("active show").show();
+
+                        calculate();
+                    }));
         }
     }
 });
 
 function cancelCurrentJob() {
-    var jobId = $("#routeModal").attr("data-job-id");
+    var jobId = $("#calculate-tab-content").attr("data-job-id");
     if (jobId !== undefined) {
         $.post("{{ url_for('cancel_calculate_request') }}", {jobId: jobId});
-        $("#routeModal").removeAttr("data-job-id");
+        $("#calculate-tab-content").removeAttr("data-job-id");
     }
 }
 
-$('#routeModal').on('hidden.bs.modal', cancelCurrentJob);
+$('#calculate-tab').on('hide.bs.tab', cancelCurrentJob);
 
 function getTrains(row) {
     var trainCells = row.slice(1, 5).filter(train => !isEmpty(train));
@@ -33,8 +42,8 @@ function getTrains(row) {
 }
 
 function toggleCities(self) {
-    $("#calculate-modal-body .cityPath").toggle();
-    var hidden = $("#calculate-modal-body .cityPath").css("display") === "none";
+    $("#calculate-result .cityPath").toggle();
+    var hidden = $("#calculate-result .cityPath").css("display") === "none";
     localStorage.hideCityPaths = hidden;
     if (hidden) {
         $(self).text("Show cities");
@@ -50,11 +59,11 @@ function requestAndDisplayRoutes(jobId) {
                 if (resultJson.hasOwnProperty("jobId")) {
                     setTimeout(requestAndDisplayRoutes, 1000, resultJson["jobId"]);
                 } else {
-                    $("#calculate-modal-body").empty();
+                    $("#calculate-result").empty();
                     if ("routes" in resultJson) {
                         $("<ul />")
                             .attr("id", "route-list")
-                            .appendTo($("#calculate-modal-body"));
+                            .appendTo($("#calculate-result"));
                         if (!Object.keys(resultJson["routes"]).length) {
                             $("<li />")
                                 .text("No valid routes were found for the given configuration and railroad.")
@@ -62,7 +71,7 @@ function requestAndDisplayRoutes(jobId) {
                         } else {
                             var hideCityPaths = localStorage.hideCityPaths === "true";
 
-                            $("#calculate-modal-body")
+                            $("#calculate-result")
                                 .prepend($("<a></a>")
                                     .text(hideCityPaths ? "Show cities": "Hide cities")
                                     .attr("href", "#")
@@ -98,7 +107,7 @@ function requestAndDisplayRoutes(jobId) {
                         $("<div />")
                             .css("color", "red")
                             .text(resultJson["error"]["message"])
-                            .appendTo($("#calculate-modal-body"));
+                            .appendTo($("#calculate-result"));
                     }
                 }
             }
@@ -114,24 +123,24 @@ function calculate() {
     }
 
     cancelCurrentJob();
-    $("#calculate-modal-body").empty();
+    $("#calculate-result").empty();
 
     $("<div />")
         .addClass("spinner")
         .css("width", "50px")
         .css("height", "50px")
         .css("margin", "auto")
-        .appendTo($("#calculate-modal-body"));
+        .appendTo($("#calculate-result"));
 
     var postData = {
         "railroads-json": JSON.stringify(getRailroadsAsTable()),
         "private-companies-json": JSON.stringify(getPrivateCompaniesAsTable()),
         "board-state-json": JSON.stringify(getTilesAsTable()),
-        "railroad-name": $("#railroad-name").val()
+        "railroad-name": $("#calculate-dropdown").attr("data-selected")
     }
     $.post("{{ url_for('calculate') }}", postData)
         .done(function(resultJson) {
-            $("#routeModal").attr("data-job-id", resultJson["jobId"]);
+            $("#calculate-tab-content").attr("data-job-id", resultJson["jobId"]);
             requestAndDisplayRoutes(resultJson["jobId"]);
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
@@ -164,13 +173,5 @@ function readyToCalculate() {
 }
 
 function railroadSelected() {
-    return getRailroads().includes($("#railroad-name").val());
+    return getRailroads().includes($("#calculate-dropdown").attr("data-selected"));
 }
-
-$("#railroad-name").change(function() {
-    calculate();
-    if (readyToCalculate()) {
-        $("#reload-calculate").show();
-    }
-});
-$("#reload-calculate").click(calculate);

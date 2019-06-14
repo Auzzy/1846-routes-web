@@ -8,7 +8,6 @@
     <button id="general-report-issue-open" class="float-right btn btn-outline-danger" data-toggle="modal" data-target="#general-report-issue-modal" style="margin-right: 25px;">Report Issue</button>
 </div>
 <div id="controls" style="margin-bottom: 10px; width: 100%; text-align: center">
-    <button id="calculate-submit" class="btn btn-success" data-toggle="modal" data-target="#routeModal">Calculate</button>
     <button id="global-import-export-button" type="button" class="btn btn btn-outline-primary" style="margin-left: 20px" data-toggle="modal" data-target="#global-import-export-modal">Global Import/Export</button>
     <button id="controls-clear" type="button" class="btn btn-outline-danger" style="margin-left: 10px;" data-toggle="modal" data-target="#confirm-clear-map-modal">Clear Map</button>
 </div>
@@ -28,36 +27,23 @@
             <li class="nav-item">
                 <a class="nav-link" id="private-companies-table-tab" data-toggle="tab" href="#private-companies-table-tab-content" role="tab" aria-controls="private-companies-table-tab" aria-selected="false">Private Companies</a>
             </li>
+            <div id="calculate-dropdown" class="dropdown">
+                <button type="button" class="btn btn-success dropdown-toggle" id="calculate-dropdown-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Calculate
+                </button>
+                <div id="calculate-dropdown-menu" class="dropdown-menu" aria-labelledby="calculate-dropdown-button"></div>
+            </div>
         </ul>
-        <div class="tab-content" style="margin-top: 15px;">
+        <div id="config-tabs-content" class="tab-content" style="margin-top: 15px;">
             <div class="tab-pane fade show active" id="railroad-table-tab-content" role="tabpanel" aria-labelledby="home-tab">
                 <table id="railroads-table"></table>
             </div>
             <div class="tab-pane fade" id="private-companies-table-tab-content" role="tabpanel" aria-labelledby="profile-tab">
                 <table id="private-companies-table"></table>
             </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="routeModal" tabindex="-1" role="dialog" aria-labelledby="routeModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="form-group">
-                    <div>Best routes for</div> <select id="railroad-name" class="custom-select" style="width: 190px;"></select>
-                    <span id="reload-calculate" class="oi oi-reload" title="reload" aria-hidden="true" style="display: none;"></span>
-                </div>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div id="calculate-modal-body" class="modal-body"></div>
-            <div class="modal-footer">
-                <div class="mr-auto">
-                    <button class="btn btn-outline-danger" data-toggle="modal" data-target="#calc-report-issue-modal">Report Issue</button>
-                </div>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <div class="tab-pane fade" id="calculate-tab-content" role="tabpanel" aria-labelledby="profile-tab">
+                <h3 id="best-routes-name"></h3>
+                <div id="calculate-result"></div>
             </div>
         </div>
     </div>
