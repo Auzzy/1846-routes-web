@@ -34,7 +34,13 @@ function cancelCurrentJob() {
     }
 }
 
-$('#calculate-tab').on('hide.bs.tab', cancelCurrentJob);
+// Since calculate isn't truly a tab, we instead key off when other tabs are shown.
+$('#config-tabs').on('show.bs.tab', function() {
+    cancelCurrentJob();
+
+    var routesCanvas = $("#routes-canvas").get(0);
+    routesCanvas.getContext('2d').clearRect(0, 0, routesCanvas.width, routesCanvas.height);
+});
 
 function getTrains(row) {
     var trainCells = row.slice(1, 5).filter(train => !isEmpty(train));
@@ -102,6 +108,8 @@ function requestAndDisplayRoutes(jobId) {
                                     .append(routeDisplay)
                                     .append(cityPath);
                             }
+
+                            drawRoutesOnMap(resultJson["routes"]);
                         }
                     } else if ("error" in resultJson) {
                         $("<div />")
@@ -124,6 +132,8 @@ function calculate() {
 
     cancelCurrentJob();
     $("#calculate-result").empty();
+    var routesCanvas = $("#routes-canvas").get(0);
+    routesCanvas.getContext('2d').clearRect(0, 0, routesCanvas.width, routesCanvas.height);
 
     $("<div />")
         .addClass("spinner")
@@ -152,6 +162,9 @@ function clearCalculateTab() {
     if ($("#calculate-tab-content").hasClass("active")) {
         $("#railroad-table-tab").tab("show");
     }
+
+    var routesCanvas = $("#routes-canvas").get(0);
+    routesCanvas.getContext('2d').clearRect(0, 0, routesCanvas.width, routesCanvas.height);
 }
 
 

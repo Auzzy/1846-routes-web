@@ -3,15 +3,53 @@ var firstCoord = legalCoords[0]
 var lastCoord = legalCoords[legalCoords.length - 1]
 var currentCoordFocus = undefined;
 var cityNames = {{ city_names | safe }}
+var routeColors = [
+    "rgba(0, 255, 255, 0.8)",  // cyan
+    "rgba(255, 0, 255, 0.8)",  // fuchsia
+    "rgba(255, 178, 127, 1)",  // light tangelo
+    "rgba(255, 0, 0, 0.8)"  // red
+];
 
 function repositionCanvases() {
     var mapImage = $("#placed-tiles-board").get(0);
-    $("#placed-tiles-board-canvas, #tile-focus-canvas, #stations-canvas")
+    $("#placed-tiles-board-canvas, #tile-focus-canvas, #stations-canvas, #routes-canvas")
         .css("position", "absolute")
         .css("left", mapImage.offsetLeft)
         .css("top", mapImage.offsetTop)
         .prop("width", mapImage.width)
         .prop("height", mapImage.height);
+}
+
+function drawRoutesOnMap(routes) {
+    var routesCanvas = $("#routes-canvas").get(0);
+    var context = routesCanvas.getContext('2d');
+
+    for (var k = 0; k < routes.length; k++) {
+        var coords = routes[k][1];
+
+        var routeColor = routeColors[k % routeColors.length];
+
+        var routeContext = routesCanvas.getContext("2d");
+        routeContext.strokeStyle = routeColor;
+        routeContext.shadowBlur = 10;
+        routeContext.shadowColor = routeColor;
+        routeContext.lineWidth = 5;
+
+        routeContext.beginPath();
+
+        var rowAndCol = coordToRowAndCol(coords[0]);
+        var tileCenter = getTileCenter(routesCanvas, rowAndCol.row, rowAndCol.col);
+        routeContext.moveTo(tileCenter.x, tileCenter.y);
+
+        coords.slice(1).forEach(coord => {
+            var rowAndCol = coordToRowAndCol(coord);
+            var tileCenter = getTileCenter(routesCanvas, rowAndCol.row, rowAndCol.col);
+
+            routeContext.lineTo(tileCenter.x, tileCenter.y);
+        });
+
+        routeContext.stroke();
+    }
 }
 
 function clearAllHighlights() {
@@ -194,10 +232,7 @@ function drawStationOnMap(coord, chicago, stationCount, railroadName) {
     var rowAndCol = coordToRowAndCol(coord);
     var tilePoints = getTilePoints(stationCanvas, rowAndCol.row, rowAndCol.col);
 
-    var tileCenter = {
-        x: (Math.max(...tilePoints.map(coord => coord.x)) + Math.min(...tilePoints.map(coord => coord.x))) / 2,
-        y: (Math.max(...tilePoints.map(coord => coord.y)) + Math.min(...tilePoints.map(coord => coord.y))) / 2
-    };
+    var tileCenter = getTileCenter(stationCanvas, rowAndCol.row, rowAndCol.col);
     var tileSize = {
         width: Math.max(...tilePoints.map(coord => coord.x)) - Math.min(...tilePoints.map(coord => coord.x)),
         height: Math.max(...tilePoints.map(coord => coord.y)) - Math.min(...tilePoints.map(coord => coord.y))
@@ -288,6 +323,14 @@ function getTileTopLeft(mapImage, row, col) {
     var ycoord = startY + row * (mapImage.height * 0.091);
 
     return {x: xcoord, y: ycoord};
+}
+
+function getTileCenter(mapImage, row, col) {
+    var tilePoints = getTilePoints(mapImage, row, col);
+    return {
+        x: (Math.max(...tilePoints.map(coord => coord.x)) + Math.min(...tilePoints.map(coord => coord.x))) / 2,
+        y: (Math.max(...tilePoints.map(coord => coord.y)) + Math.min(...tilePoints.map(coord => coord.y))) / 2
+    };
 }
 
 function getTilePoints(mapImage, row, col) {
