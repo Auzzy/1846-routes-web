@@ -148,6 +148,12 @@ function calculate() {
         });
 }
 
+function clearCalculateTab() {
+    if ($("#calculate-tab-content").hasClass("active")) {
+        $("#railroad-table-tab").tab("show");
+    }
+}
+
 
 function railroadRowReady(row) {
     return !isEmpty(row[0]) &&

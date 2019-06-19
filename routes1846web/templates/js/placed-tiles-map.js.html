@@ -356,6 +356,7 @@ function tileModalStationEntry(coord, railroadName) {
                     removeRailroadStation(railroadRow, coord);
                     populateStations(coord);
                     drawTokens();
+                    clearCalculateTab();
 
                     updateLocalStorageRailroads();
                 }));
@@ -448,6 +449,7 @@ function populateTileSelectorStationDropdown(sourceRow, coord, neighbor) {
                         addRailroadStation(row, coord, neighbor);
                         populateStations(coord);
                         drawTokens();
+                        clearCalculateTab();
 
                         updateLocalStorageRailroads();
                     }));
@@ -507,6 +509,7 @@ function populateOrientations(sourceTile, coord, tileId) {
         placeTile(coord, tileId, orientation);
         drawTileOnMap(coord, tileId, orientation);
         drawTokens();
+        clearCalculateTab();
 
         $('#tile-selector').modal('hide');
     }
@@ -736,6 +739,7 @@ $("#delete-tile-button").click(function(event) {
     removeTile(coord);
     removeTileFromMap(coord);
     drawTokens();
+    clearCalculateTab();
 });
 
 $("#tile-selector").on("show.bs.modal", function() {
@@ -758,6 +762,7 @@ $("#confirm-clear-map-modal-confirm").click(function() {
     updateLocalStoragePlacedTiles();
     drawMap();
     drawTokens();
+    clearCalculateTab();
 });
 
 function importTiles(importText) {
