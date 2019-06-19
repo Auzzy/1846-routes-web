@@ -25,7 +25,9 @@ function gatherCalcIssueData() {
     var issueData = gatherGeneralIssueData();
     $.extend(true, issueData, {
         targetRailroad: $("#calculate-dropdown").attr("data-selected"),
-        jobId: $("#calculate-tab-content").data("jobId")
+        jobId: $("#calculate-tab-content").attr("data-job-id"),
+        resultHtml: $("#calculate-result").html(),
+        hideCities: localStorage.hideCityPaths
     });
     return issueData;
 }
@@ -125,7 +127,7 @@ $("#general-report-issue-submit").click(function() {
     if ($("#calculate-tab-content").hasClass("active")) {
         var reportData = gatherCalcIssueData();
         reportData.subject = "route calculation issue";
-        reportIssue("calc-report-issue", reportData, "{{ url_for('report_calc_issue') }}");
+        reportIssue("general-report-issue", reportData, "{{ url_for('report_calc_issue') }}");
     } else {
         var reportData = gatherGeneralIssueData();
         reportData.subject = "general issue";

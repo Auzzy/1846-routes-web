@@ -441,10 +441,18 @@ def report_general_issue():
 def report_calc_issue():
     target_railroad = request.form.get("targetRailroad")
     job_id = request.form.get("jobId")
+    result_html = request.form.get("resultHtml")
+    hide_cities = request.form.get("hideCities")
 
     msg = _build_general_message()
 
     routes_json = _get_calculate_result(job_id)
+    routes_json.update({
+          "jobId": job_id,
+          "resultHtml": result_html,
+          "hideCities": hide_cities
+    })
+
     msg.attach("routes.json", "application/json", json.dumps({target_railroad: routes_json}, indent=4, sort_keys=True))
 
     mail.send(msg)
