@@ -126,6 +126,7 @@ def main():
 @app.route("/calculate", methods=["POST"])
 def calculate():
     railroads_state_rows = json.loads(request.form.get("railroads-json"))
+    removed_railroads = json.loads(request.form.get("removed-railroads-json"))
     private_companies_rows = json.loads(request.form.get("private-companies-json"))
     board_state_rows = json.loads(request.form.get("board-state-json"))
     railroad_name = request.form["railroad-name"]
@@ -134,11 +135,14 @@ def calculate():
     LOG.info("Target railroad: {}".format(railroad_name))
     LOG.info("Private companies: {}".format(private_companies_rows))
     LOG.info("Railroad input: {}".format(railroads_state_rows))
+    LOG.info("Removed railroads: {}".format(removed_railroads))
     LOG.info("Board input: {}".format(board_state_rows))
 
     for row in railroads_state_rows:
         if row[3]:
             row[3] = CHICAGO_STATION_COORDS[row[3]]
+
+    railroads_state_rows += [[name, "removed"] for name in removed_railroads]
 
     job = CALCULATOR_QUEUE.enqueue(calculate_worker, railroads_state_rows, private_companies_rows, board_state_rows, railroad_name, timeout="5m")
 
