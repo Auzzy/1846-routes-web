@@ -6,6 +6,8 @@ function deleteRemovedRailroad(railroad) {
     $(`#removed-railroads button[data-railroad='${railroad}']`).remove();
 
     drawTokens();
+
+    updateLocalStorageRemovedRailroads();
 }
 
 function addRemovedRailroad(railroadName) {
@@ -23,6 +25,61 @@ function addRemovedRailroad(railroadName) {
             .click(function() {
                 deleteRemovedRailroad($(this).attr("data-railroad"));
             }));
+}
+
+function updateLocalStorageRemovedRailroads() {
+    if (typeof(Storage) !== "undefined") {
+        localStorage.removedRailroadsTable = JSON.stringify(getRemovedRailroads());
+    }
+}
+
+function loadFromLocalStorageRemovedRailroads() {
+    if (typeof(Storage) !== "undefined") {
+        if (localStorage.removedRailroadsTable !== undefined) {
+            importRemovedRailroads(prepareRemovedRailroadsForExport(JSON.parse(localStorage.removedRailroadsTable)));
+        }
+    }
+}
+
+function importRemovedRailroads(importText) {
+    var importRows = importText.trim().split("\n");
+    var removedRailroadRows = importRows
+        .map(row => row.split(";"))
+        // Since the railroads and removed railroads shared a text area, filter out the railroads
+        .filter(row => row.length >= 2 && !isEmpty(row[1]) && row[1].trim().toLowerCase() === "removed")
+        .map(row => row[0]);
+
+    return $.get("{{ url_for('legal_railroads') }}")
+        .then(railroadsResponse => {
+            var legalRailroads = railroadsResponse["railroads"];
+            return removedRailroadRows
+                .filter(railroadName => legalRailroads.includes(railroadName)
+                    && !getRailroads().includes(railroadName))
+        }).then(railroadNames => {
+            railroadNames.forEach(railroadName => {
+                var railroadButton = $(`#removed-railroads button[data-railroad='${railroadName}']`);
+                if (railroadButton.length === 0) {
+                    addRemovedRailroad(railroadName);
+                }
+            });
+
+            // Delete railroads which are in the table but not the import block
+            getRemovedRailroads()
+                .filter(railroad => !railroadNames.includes(railroad))
+                .forEach(railroad => {
+                    $(`#removed-railroads button[data-railroad='${railroad}']`).remove()
+                });
+
+            drawTokens();
+
+            updateLocalStorageRemovedRailroads();
+        });
+}
+
+function prepareRemovedRailroadsForExport(removedRailroadNames) {
+    return (removedRailroadNames === undefined ? getRemovedRailroads() : removedRailroadNames)
+        .map(removedRailroad => `${removedRailroad}; removed`)
+        .join("\n");
 }
 
 function populateRemoveRailroadsDropdown(source) {
@@ -44,6 +101,8 @@ function populateRemoveRailroadsDropdown(source) {
                             addRemovedRailroad($(this).attr("data-railroad"));
 
                             drawTokens();
+
+                            updateLocalStorageRemovedRailroads();
                         })
                     );
             });
@@ -53,3 +112,5 @@ function populateRemoveRailroadsDropdown(source) {
 $("#remove-railroad-dropdown").on("show.bs.dropdown", function() {
     populateRemoveRailroadsDropdown(this);
 });
+
+loadFromLocalStorageRemovedRailroads();

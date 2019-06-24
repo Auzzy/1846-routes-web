@@ -172,9 +172,24 @@ $("#global-import-save").click(function() {
             importRailroads($("#railroads-import-export-textarea").val())
                 .then(() => {
                     updateLocalStorageRailroads();
-                    importPrivateCompanies($("#private-companies-import-export-textarea").val())
+                    importRemovedRailroads($("#railroads-import-export-textarea").val())
                         .then(() => {
-                            updateLocalStoragePrivateCompanies();
+                            updateLocalStorageRemovedRailroads();
+                            importPrivateCompanies($("#private-companies-import-export-textarea").val())
+                                .then(() => {
+                                    updateLocalStoragePrivateCompanies();
+                                })
+                                .then(() => {
+                                    var allRailroads = getRailroads();
+                                    var allRemovedRailroads = getRemovedRailroads();
+                                    if (allRailroads.length + getRemovedRailroads().length > new Set(getRailroads().concat(getRemovedRailroads())).size) {
+                                        allRailroads.forEach(railroad => {
+                                            if (allRemovedRailroads.includes(railroad)) {
+                                                deleteRemovedRailroad(railroad);
+                                            }
+                                        });
+                                    }
+                                });
                         });
                 });
         });
@@ -191,7 +206,8 @@ $("#global-import-export-modal").on("show.bs.modal", function() {
     $("#private-companies-import-export-textarea").attr("readonly", true);
 
     $("#tiles-import-export-textarea").val("").val(prepareTilesForExport());
-    $("#railroads-import-export-textarea").val(prepareRailroadsForExport());
+    $("#railroads-import-export-textarea").val(prepareRailroadsForExport()
+            + "\n" + prepareRemovedRailroadsForExport());
     $("#private-companies-import-export-textarea").val(preparePrivateCompaniesForExport());
 
     $("#global-import-save").attr("disabled", false);

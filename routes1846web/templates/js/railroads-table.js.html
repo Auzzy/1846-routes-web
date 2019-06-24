@@ -140,6 +140,17 @@ function loadFromLocalStorageRailroads() {
 }
 
 function importRailroads(importText) {
+    var importRows = importText.trim().split("\n");
+    var tableData = importRows
+        .map(row => {
+            return row.split(";")
+                .map(cell => cell.trim().split(",")
+                    .map(value => value.trim())
+                    .filter(value => !isEmpty(value)));
+        })
+        // Since the railroads and removed railroads shared a text area, filter out the removed railroads
+        .filter(row => row.length < 2 || isEmpty(row[1][0]) || row[1][0].trim().toLowerCase() !== "removed");
+
     return $.when(
         $.get("{{ url_for('legal_railroads') }}"),
         $.get("{{ url_for('trains') }}"),
@@ -154,8 +165,7 @@ function importRailroads(importText) {
 
         var chicagoNeighbors = [];
         var importTableData = [];
-        importText.trim().split("\n").forEach(row => {
-            var rowData = row.split(";").map(cell => cell.trim().split(",").map(value => value.trim()).filter(value => !isEmpty(value)));
+        tableData.forEach(rowData => {
             // Ensure rowData always consists of 4 values
             rowData = rowData.concat(new Array(4 - rowData.length).fill([]));
 
