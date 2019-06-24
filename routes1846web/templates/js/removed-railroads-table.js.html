@@ -1,0 +1,55 @@
+function getRemovedRailroads() {
+    return $("#removed-railroads button[data-railroad]").map((index, element) => $(element).attr("data-railroad")).toArray();
+}
+
+function deleteRemovedRailroad(railroad) {
+    $(`#removed-railroads button[data-railroad='${railroad}']`).remove();
+
+    drawTokens();
+}
+
+function addRemovedRailroad(railroadName) {
+    $("#removed-railroads")
+        .append($("<button></button>")
+            .addClass("btn btn-sm btn-outline-info")
+            .attr("type", "button")
+            .attr("data-railroad", railroadName)
+            .attr("data-home", homeCity)
+            .css("margin-right", 5)
+            .append($("<span></span>")
+                .addClass("oi oi-circle-x align-text-top")
+                .css("margin-right", 5))
+            .append($("<span></span>").text(railroadName))
+            .click(function() {
+                deleteRemovedRailroad($(this).attr("data-railroad"));
+            }));
+}
+
+function populateRemoveRailroadsDropdown(source) {
+    $("#remove-railroad-dropdown-list").empty();
+
+    $.get("{{ url_for('legal_railroads') }}", {railroads: JSON.stringify(getRemovedRailroads())})
+        .done(function(result) {
+            var activeRailroads = getRailroads();
+            result["railroads"]
+                .filter(railroad => !activeRailroads.includes(railroad))
+                .forEach(railroad => {
+                $("#remove-railroad-dropdown-list")
+                    .append($("<a></a>")
+                        .addClass("dropdown-item")
+                        .attr("data-railroad", railroad)
+                        .attr("href", "#")
+                        .text(railroad)
+                        .click(function() {
+                            addRemovedRailroad($(this).attr("data-railroad"));
+
+                            drawTokens();
+                        })
+                    );
+            });
+        });
+}
+
+$("#remove-railroad-dropdown").on("show.bs.dropdown", function() {
+    populateRemoveRailroadsDropdown(this);
+});

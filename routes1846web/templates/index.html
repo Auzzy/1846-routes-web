@@ -38,6 +38,16 @@
         <div id="config-tabs-content" class="tab-content" style="margin-top: 15px;">
             <div class="tab-pane fade show active" id="railroad-table-tab-content" role="tabpanel" aria-labelledby="home-tab">
                 <table id="railroads-table"></table>
+                <div style="margin-top: 10px;">
+                    <h4>Removed Railroads</h4>
+                    <div id="removed-railroads"></div>
+                    <div class="dropdown" id="remove-railroad-dropdown" style="margin-top: 5px;">
+                        <button class="btn btn-sm btn-info dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span class="oi oi-plus align-text-top"></span>
+                        </button>
+                        <div class="dropdown-menu" id="remove-railroad-dropdown-list"></div>
+                    </div>
+                </div>
             </div>
             <div class="tab-pane fade" id="private-companies-table-tab-content" role="tabpanel" aria-labelledby="profile-tab">
                 <table id="private-companies-table"></table>
@@ -198,6 +208,8 @@ $("#global-import-export-modal").on("show.bs.modal", function() {
 {% include "js/placed-tiles-table.js.html" %}
 
 {% include "js/railroads-table.js.html" %}
+
+{% include "js/removed-railroads-table.js.html" %}
 
 {% include "js/private-companies-table.js.html" %}
 

@@ -600,32 +600,34 @@ function populateRailroadsDropdown(source) {
 
     $.get("{{ url_for('legal_railroads') }}", {railroads: JSON.stringify(getRailroads())})
         .done(function(result) {
-            result["railroads"].forEach(railroad => {
-                $("#add-railroad-dropdown-list")
-                    .append($("<a></a>")
-                        .addClass("dropdown-item")
-                        .attr("data-railroad", railroad)
-                        .attr("href", "#")
-                        .text(railroad)
-                        .click(function() {
-                            var nameRow = $(source).parents("tr");
+            result["railroads"]
+                .filter(railroad => !getRemovedRailroads().includes(railroad))
+                .forEach(railroad => {
+                    $("#add-railroad-dropdown-list")
+                        .append($("<a></a>")
+                            .addClass("dropdown-item")
+                            .attr("data-railroad", railroad)
+                            .attr("href", "#")
+                            .text(railroad)
+                            .click(function() {
+                                var nameRow = $(source).parents("tr");
 
-                            setRailroadName(nameRow, $(this).attr("data-railroad"));
+                                setRailroadName(nameRow, $(this).attr("data-railroad"));
 
-                            addTrainAndStationButtons(nameRow);
-                            newRow();
+                                addTrainAndStationButtons(nameRow);
+                                newRow();
 
-                            var homeCity = result["home-cities"][$(this).attr("data-railroad")];
-                            setRailroadStations(nameRow, [homeCity]);
-                            setRailroadHomeCity(nameRow, homeCity);
+                                var homeCity = result["home-cities"][$(this).attr("data-railroad")];
+                                setRailroadStations(nameRow, [homeCity]);
+                                setRailroadHomeCity(nameRow, homeCity);
 
-                            drawTokens();
+                                drawTokens();
 
-                            $(nameRow).find(".trains ~ button").focus();
+                                $(nameRow).find(".trains ~ button").focus();
 
-                            updateLocalStorageRailroads();
-                        })
-                    );
+                                updateLocalStorageRailroads();
+                            })
+                        );
             });
         });
 }
