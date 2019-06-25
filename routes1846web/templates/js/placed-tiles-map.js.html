@@ -230,6 +230,16 @@ function drawTokens() {
         }
     });
 
+    getRemovedRailroads().forEach(railroad => {
+        var coord = getRemovedRailroadsAsTable().find(row => row[0] === railroad)[1];
+        if (!(coord in stationCountByCoord)) {
+            stationCountByCoord[coord] = 0;
+        }
+
+        drawStationOnMap(coord, undefined, stationCountByCoord[coord], railroad);
+        stationCountByCoord[coord]++;
+    });
+
     var allTrains = new Array().concat(...getRailroadsAsTable().map(railroad => {
         return isEmpty(railroad[1]) ? [] : railroad[1].split(",").map(value => value.trim());
     }));

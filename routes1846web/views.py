@@ -363,7 +363,8 @@ def removable_railroads():
     LOG.info("Removable railroads response: {}".format(removable_railroads))
 
     return jsonify({
-        "railroads": list(sorted(removable_railroads))
+        "railroads": list(sorted(removable_railroads)),
+        "home-cities": {railroad: railroads.RAILROAD_HOME_CITIES[railroad] for railroad in removable_railroads}
     })
 
 @app.route("/railroads/trains")

@@ -2,6 +2,17 @@ function getRemovedRailroads() {
     return $("#removed-railroads button[data-railroad]").map((index, element) => $(element).attr("data-railroad")).toArray();
 }
 
+function getRemovedRailroadsAsTable() {
+    var removedRailroadsTableData = [];
+    $("#removed-railroads button[data-railroad]").each((index, element) => {
+        return removedRailroadsTableData.push([
+            $(element).attr("data-railroad"),
+            $(element).attr("data-home")
+        ]);
+    });
+    return removedRailroadsTableData;
+}
+
 function deleteRemovedRailroad(railroad) {
     $(`#removed-railroads button[data-railroad='${railroad}']`).remove();
 
@@ -10,7 +21,7 @@ function deleteRemovedRailroad(railroad) {
     updateLocalStorageRemovedRailroads();
 }
 
-function addRemovedRailroad(railroadName) {
+function addRemovedRailroad(railroadName, homeCity) {
     $("#removed-railroads")
         .append($("<button></button>")
             .addClass("btn btn-sm btn-outline-info")
@@ -52,14 +63,18 @@ function importRemovedRailroads(importText) {
     return $.get("{{ url_for('removable_railroads') }}")
         .then(railroadsResponse => {
             var legalRailroads = railroadsResponse["railroads"];
-            return removedRailroadRows
-                .filter(railroadName => legalRailroads.includes(railroadName)
-                    && !getRailroads().includes(railroadName))
-        }).then(railroadNames => {
+            return [
+                removedRailroadRows.filter(railroadName =>
+                        legalRailroads.includes(railroadName) && !getRailroads().includes(railroadName)),
+                railroadsResponse["home-cities"]
+            ];
+        }).then(data => {
+            var railroadNames = data[0];
+            var homeCities = data[1];
             railroadNames.forEach(railroadName => {
                 var railroadButton = $(`#removed-railroads button[data-railroad='${railroadName}']`);
                 if (railroadButton.length === 0) {
-                    addRemovedRailroad(railroadName);
+                    addRemovedRailroad(railroadName, homeCities[railroadName]);
                 }
             });
 
@@ -98,7 +113,9 @@ function populateRemoveRailroadsDropdown(source) {
                         .attr("href", "#")
                         .text(railroad)
                         .click(function() {
-                            addRemovedRailroad($(this).attr("data-railroad"));
+                            var railroad = $(this).attr("data-railroad");
+                            var homeCity = result["home-cities"][railroad];
+                            addRemovedRailroad(railroad, homeCity);
 
                             drawTokens();
 
