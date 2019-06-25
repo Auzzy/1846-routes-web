@@ -352,6 +352,20 @@ def legal_railroads():
         "home-cities": {railroad: railroads.RAILROAD_HOME_CITIES[railroad] for railroad in legal_railroads}
     })
 
+@app.route("/railroads/removable-railroads")
+def removable_railroads():
+    LOG.info("Removable railroads request.")
+
+    existing_railroads = {railroad for railroad in json.loads(request.args.get("railroads", "{}")) if railroad}
+
+    removable_railroads = railroads.REMOVABLE_RAILROADS - existing_railroads
+
+    LOG.info("Removable railroads response: {}".format(removable_railroads))
+
+    return jsonify({
+        "railroads": list(sorted(removable_railroads))
+    })
+
 @app.route("/railroads/trains")
 def trains():
     LOG.info("Train request.")
