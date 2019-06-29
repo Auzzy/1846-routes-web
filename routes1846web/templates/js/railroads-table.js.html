@@ -115,6 +115,17 @@ function setRailroadTrains(railroadRow, trains) {
     railroadRow.attr("data-trains", trainsDisplay.attr("data-trains"));
 }
 
+function updatePhase() {
+    var allTrains = new Array().concat(...getRailroadsAsTable().map(railroad => {
+        return isEmpty(railroad[1]) ? [] : railroad[1].split(",").map(value => value.trim());
+    }));
+
+    $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
+        .done(result => {
+            $("#board-phase").text(result["phase"]);
+        });
+}
+
 function setRailroadName(railroadRow, railroad) {
     var nameCell = $(railroadRow).children("td:nth-child(1)");
     var nameDisplay = nameCell.children(".railroad");
@@ -192,7 +203,7 @@ function importRailroads(importText) {
         });
 
         return importTableData;
-    }).then((importTableData, value) => {
+    }).then(importTableData => {
         importTableData.forEach(rowData => {
             var railroadName = rowData[0][0];
             var tableRow = $(`#railroads-table tr[data-railroad='${railroadName}']`);
@@ -222,6 +233,8 @@ function importRailroads(importText) {
         drawTokens();
 
         $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
+
+        updatePhase();
     });
 }
 
@@ -320,6 +333,7 @@ function addTrainAndStationButtons(rowElement) {
                     $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
                     removeAllPrivateCompanies(company => company[1] === $(this).parents("tr").attr("data-railroad"));
                     updateLocalStorageRailroads();
+                    updatePhase();
                 }));
 }
 
@@ -657,6 +671,8 @@ $("#trains-modal-confirm").click(function() {
         var count = parseInt($(element).find("input[type='number']").val());
         trains = trains.concat(new Array(count).fill($(element).attr("data-train")));
     }).get();
+
+    updatePhase();
 
     var railroad = $("#trains-modal").attr("data-railroad");
     setRailroadTrains($(`#railroads-table tr[data-railroad='${railroad}']`), trains);

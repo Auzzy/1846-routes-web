@@ -375,11 +375,12 @@ def removable_railroads():
 def trains():
     LOG.info("Train request.")
 
-    trains = [str(railroads.Train(collect, visit, None)) for collect, visit in sorted(railroads.TRAIN_TO_PHASE)]
+    trains = [railroads.Train(train_attr[0], train_attr[1], phase) for train_attr, phase in railroads.TRAIN_TO_PHASE.items()]
+    train_strs = [str(train) for train in sorted(trains, key=lambda train: (train.collect, train.visit))]
 
     LOG.info("Train response: {}".format(trains))
 
-    return jsonify({"trains": trains})
+    return jsonify({"trains": train_strs})
 
 @app.route("/railroads/cities")
 def cities():
