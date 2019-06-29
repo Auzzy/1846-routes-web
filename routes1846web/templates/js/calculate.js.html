@@ -14,6 +14,8 @@ $("#calculate-dropdown").on("show.bs.dropdown", function () {
                     .text(row[0])
                     .click(function(e) {
                         $("#calculate-dropdown").attr("data-selected", $(e.target).attr("data-name"));
+
+                        $("#best-routes-total").empty();
                         $("#best-routes-name").text($("#calculate-dropdown").attr("data-selected"));
 
                         $("#config-tabs").find(".active").removeClass("active");
@@ -108,6 +110,11 @@ function requestAndDisplayRoutes(jobId) {
                                     .append(routeDisplay)
                                     .append(cityPath);
                             }
+
+                            var routesTotal = resultJson["routes"]
+                                .map(trainRouteInfo => trainRouteInfo[2])
+                                .reduce((accum, value) => accum + value);
+                            $("#best-routes-total").text(` = ${routesTotal}`);
 
                             drawRoutesOnMap(resultJson["routes"]);
                         }
