@@ -33,6 +33,7 @@ function cancelCurrentJob() {
     if (jobId !== undefined) {
         $.post("{{ url_for('cancel_calculate_request') }}", {jobId: jobId});
         $("#calculate-tab-content").removeAttr("data-job-id");
+        toggleEnableInput(true);
     }
 }
 
@@ -124,10 +125,14 @@ function requestAndDisplayRoutes(jobId) {
                             .text(resultJson["error"]["message"])
                             .appendTo($("#calculate-result"));
                     }
+
+                    toggleEnableInput(true);
                 }
             }
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
+            toggleEnableInput(true);
+
             alert(errorThrown);
         });
 }
@@ -138,6 +143,12 @@ function calculate() {
     }
 
     cancelCurrentJob();
+
+    toggleEnableInput(false);
+    // The user should always be able to switch railroads mid-calculation, to
+    // correct their mistake if they clicked the wrong railroad.
+    $("#calculate-dropdown button").prop("disabled", false);
+
     $("#calculate-result").empty();
     var routesCanvas = $("#routes-canvas").get(0);
     routesCanvas.getContext('2d').clearRect(0, 0, routesCanvas.width, routesCanvas.height);
