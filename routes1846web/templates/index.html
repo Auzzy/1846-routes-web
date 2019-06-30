@@ -11,7 +11,7 @@
     <button id="global-import-export-button" type="button" class="btn btn btn-outline-primary" style="margin-left: 20px" data-toggle="modal" data-target="#global-import-export-modal">Global Import/Export</button>
     <button id="controls-clear" type="button" class="btn btn-outline-danger" style="margin-left: 10px;" data-toggle="modal" data-target="#confirm-clear-map-modal">Clear Map</button>
 </div>
-<div>
+<div id="app-input-area" style="height: 100%;">
     <div id="map-section" style="float: left; max-width: 60%">
         <img tabindex="0" id="placed-tiles-board" src="{{ url_for('static', filename='images/1846-Map.png') }}" />
         <canvas id="placed-tiles-board-canvas"></canvas>
@@ -149,21 +149,87 @@ function isEmpty(value) {
     return value === '' || value === null || value === undefined;
 }
 
-function loadGameState() {
-    // Wait until the map has finished loading to draw the saved map. This is likely to kick in if a cache-refresh page
-    // reload is issued.
-    $("#placed-tiles-board").one("load", loadFromLocalStoragePlacedTiles);
+function canDisable(handler) {
+    return function (event) {
+        if ($(event.delegateTarget).attr("data-disabled") === "true") {
+            return;
+        }
+        return handler(event);
+    };
+};
 
-    // If the image was cached, it may be loaded by the time the above event is attached, so load the saved map immdeiately.
-    if ($("#placed-tiles-board").get(0).complete) {
-        loadFromLocalStoragePlacedTiles();
-    }
-
-    loadFromLocalStorageRailroads();
-    loadFromLocalStorageRemovedRailroads();
-    loadFromLocalStoragePrivateCompanies();
+function appIsDoneLoading() {
+    $("#loading-spinner").remove();
+    $("#loading-canvas").remove();
 }
 
+function appIsLoading() {
+    $("#app-input-area")
+        // Place canvas over app to created "greyed out" effect.
+        .append($("<canvas></canvas>")
+            .attr("id", "loading-canvas")
+            .css("z-index", "100")
+            .css("position", "absolute")
+            .css("left", $("#placed-tiles-board").position().left)
+            .css("top", $("#placed-tiles-board").position().top)
+            .prop("width", $("#app-input-area").width())
+            .prop("height", $("#app-input-area").height())
+            .css("background-color", "rgba(255, 255, 255, 0.7)"))
+
+        // Draw a (large) spinner to show loading.
+        .append($("<div></div>")
+            .attr("id", "loading-spinner")
+            .addClass("spinner")
+            .css("z-index", "100")
+            .css("border-width", 12)
+            .css("border-color", "#c3c3c3")
+            .css("border-top-color", "#3498db")
+            .css("width", "100px")
+            .css("height", "100px")
+            .css("margin", "auto")
+            .css("position", "fixed")
+            .css("top", $("#placed-tiles-board").position().top + $("#app-input-area").height() / 2 - 50)
+            .css("left", $("#placed-tiles-board").position().left + $("#app-input-area").width() / 2 - 50));
+}
+
+function toggleEnableInput(enable) {
+    toggleEnableMap(enable);
+    toggleEnableRailroads(enable);
+    toggleEnableRemovedRailroads(enable);
+    toggleEnablePrivateCompanies(enable);
+
+    $("#controls button").prop("disabled", !enable);
+    $("#calculate-dropdown button").prop("disabled", !enable);
+}
+
+function loadGameState() {
+    toggleEnableInput(false);
+    appIsLoading();
+
+    function loadState() {
+        $.when(
+            loadFromLocalStoragePlacedTiles(),
+            loadFromLocalStorageRailroads(),
+            loadFromLocalStorageRemovedRailroads(),
+            loadFromLocalStoragePrivateCompanies()
+        ).then(() => {
+            toggleEnableInput(true);
+            appIsDoneLoading();
+        });
+    }
+
+    // Wait until the map has finished loading to draw the saved map. This is likely to kick in if a cache-refresh page
+    // reload is issued.
+    $("#placed-tiles-board").one("load", loadState);
+    
+    // If the image was cached, it may be loaded by the time the above event is attached, so load the saved map immdeiately.
+    if ($("#placed-tiles-board").get(0).complete) {
+        $("#placed-tiles-board").off("load");
+        loadState();
+    }
+
+    
+}
 
 // Scale the map to fit on the screen
 $("#placed-tiles-board").height("100%").css("height", "-=" + $("#placed-tiles-board").offset().top);
@@ -178,6 +244,8 @@ if (remainingSpace < 300) {
 }
 
 $("#global-import-save").click(function() {
+    toggleEnableInput(false);
+
     $("#global-import-save").attr("disabled", true);
     $("#tile-import-export-textarea").attr("readonly", true);
     $("#railroads-import-export-textarea").attr("readonly", true);
@@ -206,6 +274,8 @@ $("#global-import-save").click(function() {
                                             }
                                         });
                                     }
+
+                                    toggleEnableInput(true);
                                 });
                         });
                 });

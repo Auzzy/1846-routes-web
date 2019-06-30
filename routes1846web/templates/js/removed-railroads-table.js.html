@@ -36,6 +36,10 @@ function addRemovedRailroad(railroadName, homeCity) {
             .click(function() {
                 deleteRemovedRailroad($(this).attr("data-railroad"));
             }));
+
+    if ($("#removed-railroads").attr("data-disabled") === "true") {
+        $("#removed-railroads button").prop("disabled", true);
+    }
 }
 
 function updateLocalStorageRemovedRailroads() {
@@ -47,9 +51,10 @@ function updateLocalStorageRemovedRailroads() {
 function loadFromLocalStorageRemovedRailroads() {
     if (typeof(Storage) !== "undefined") {
         if (localStorage.removedRailroadsTable !== undefined) {
-            importRemovedRailroads(prepareRemovedRailroadsForExport(JSON.parse(localStorage.removedRailroadsTable)));
+            return importRemovedRailroads(prepareRemovedRailroadsForExport(JSON.parse(localStorage.removedRailroadsTable)));
         }
     }
+    return Promise.resolve();
 }
 
 function importRemovedRailroads(importText) {
@@ -124,6 +129,12 @@ function populateRemoveRailroadsDropdown(source) {
                     );
             });
         });
+}
+
+function toggleEnableRemovedRailroads(enable) {
+    $("#removed-railroads").attr("data-disabled", enable ? "false" : "true");
+    $("#removed-railroads button").prop("disabled", !enable);
+    $("#remove-railroad-dropdown button").prop("disabled", !enable);
 }
 
 $("#remove-railroad-dropdown").on("show.bs.dropdown", function() {

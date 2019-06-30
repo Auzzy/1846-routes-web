@@ -145,9 +145,10 @@ function updateLocalStorageRailroads() {
 function loadFromLocalStorageRailroads() {
     if (typeof(Storage) !== "undefined") {
         if (localStorage.railroadsTable !== undefined) {
-            importRailroads(prepareRailroadsForExport(JSON.parse(localStorage.railroadsTable)));
+            return importRailroads(prepareRailroadsForExport(JSON.parse(localStorage.railroadsTable)));
         }
     }
+    return Promise.resolve();
 }
 
 function importRailroads(importText) {
@@ -280,6 +281,10 @@ function newRow() {
                         .attr("id", "add-railroad-dropdown-list")
                         .addClass("dropdown-menu")))));
 
+    if ($("#railroads-table").attr("data-disabled") === "true") {
+        $("#railroads-table button").prop("disabled", true);
+    }
+
     $("#add-railroad-dropdown").on("show.bs.dropdown", function() {
         populateRailroadsDropdown(this);
     });
@@ -335,6 +340,10 @@ function addTrainAndStationButtons(rowElement) {
                     updateLocalStorageRailroads();
                     updatePhase();
                 }));
+
+    if ($("#railroads-table").attr("data-disabled") === "true") {
+        $("#railroads-table button").prop("disabled", true);
+    }
 }
 
 function enableSubmitViaKeyboard(modal, submitButton) {
@@ -654,6 +663,11 @@ function populateRailroadsDropdown(source) {
                         );
             });
         });
+}
+
+function toggleEnableRailroads(enable) {
+    $("#railroads-table").attr("data-disabled", enable ? "false" : "true");
+    $("#railroads-table button").prop("disabled", !enable);
 }
 
 $("#trains-modal").on("show.bs.modal", function(event) {

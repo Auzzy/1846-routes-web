@@ -22,9 +22,10 @@ function updateLocalStoragePlacedTiles() {
 function loadFromLocalStoragePlacedTiles() {
     if (typeof(Storage) !== "undefined") {
         if (localStorage.placedTilesTable !== undefined) {
-            importTiles(prepareTilesForExport(JSON.parse(localStorage.placedTilesTable)));
+            return importTiles(prepareTilesForExport(JSON.parse(localStorage.placedTilesTable)));
         }
     }
+    return Promise.resolve();
 }
 
 function findNextEmptyRow() {

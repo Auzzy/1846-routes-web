@@ -806,13 +806,13 @@ function openTileSelectionModal(rowAndCol) {
     }
 }
 
-$("#tile-focus-canvas").click(function(event) {
-    var posXOnImg = event.pageX - $(this).offset().left;
-    var posYOnImg = event.pageY - $(this).offset().top;
+$("#tile-focus-canvas").click(canDisable(function(event) {
+    var posXOnImg = event.pageX - $("#tile-focus-canvas").offset().left;
+    var posYOnImg = event.pageY - $("#tile-focus-canvas").offset().top;
 
-    var rowAndCol = mapPointToTile(this, {x: posXOnImg, y: posYOnImg});
+    var rowAndCol = mapPointToTile($("#tile-focus-canvas").get(0), {x: posXOnImg, y: posYOnImg});
     openTileSelectionModal(rowAndCol);
-});
+}));
 
 $("#delete-tile-button").click(function(event) {
     var coord = $(this).attr("data-coord");
@@ -896,7 +896,13 @@ function prepareTilesForExport(exportTilesTable) {
     return exportTilesTable.map(row => row.join("; ")).join("\n");
 }
 
-$("#placed-tiles-board").focus(function(event) {
+function toggleEnableMap(enable) {
+    var disabled = enable ? "false" : "true";
+    $("#tile-focus-canvas").attr("data-disabled", disabled);
+    $("#placed-tiles-board").attr("data-disabled", disabled);
+}
+
+$("#placed-tiles-board").focus(canDisable(function(event) {
     if (currentCoordFocus === undefined) {
         // This condition only seems to be true if focus is coming from SHIFT+TAB, maybe because it's the final element
         // on the page. For now, that's good enough for me.
@@ -905,9 +911,9 @@ $("#placed-tiles-board").focus(function(event) {
 
     clearAllHighlights();
     highlightCoord(currentCoordFocus);
-});
+}));
 
-$("#placed-tiles-board").keydown(function(event) {
+$("#placed-tiles-board").keydown(canDisable(function(event) {
     if (event.key === "Tab") {
         if (event.shiftKey) {
             if (currentCoordFocus === firstCoord) {
@@ -962,16 +968,10 @@ $("#placed-tiles-board").keydown(function(event) {
             highlightCoord(currentCoordFocus);
         }
     }
-});
+}));
 
 $("#placed-tiles-board").blur(function() {
     currentCoordFocus = undefined;
-});
-
-$("#placed-tiles-map-tab").on("shown.bs.tab", () => {
-    repositionCanvases();
-    drawMap();
-    drawTokens();
 });
 
 $("#game-board-controls")

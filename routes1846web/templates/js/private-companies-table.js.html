@@ -107,9 +107,10 @@ function updateLocalStoragePrivateCompanies() {
 function loadFromLocalStoragePrivateCompanies() {
     if (typeof(Storage) !== "undefined") {
         if (localStorage.privateCompaniesTable !== undefined) {
-            importPrivateCompanies(preparePrivateCompaniesForExport(JSON.parse(localStorage.privateCompaniesTable)));
+            return importPrivateCompanies(preparePrivateCompaniesForExport(JSON.parse(localStorage.privateCompaniesTable)));
         }
     }
+    return Promise.resolve();
 }
 
 async function importPrivateCompanies(importText) {
@@ -312,6 +313,11 @@ function populatePrivateCompanyOwnerDropdown(sourceRow) {
                         updateLocalStorageRailroads();
                     }));
         });
+}
+
+function toggleEnablePrivateCompanies(enable) {
+    $("#private-companies-table").attr("data-disabled", enable ? "false" : "true");
+    $("#private-companies-table button").prop("disabled", !enable);
 }
 
 privateCompanyHeaders();
