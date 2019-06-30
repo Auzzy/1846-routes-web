@@ -23,8 +23,6 @@ function loadFromLocalStoragePlacedTiles() {
     if (typeof(Storage) !== "undefined") {
         if (localStorage.placedTilesTable !== undefined) {
             importTiles(prepareTilesForExport(JSON.parse(localStorage.placedTilesTable)));
-            drawMap();
-            drawTokens();
         }
     }
 }
