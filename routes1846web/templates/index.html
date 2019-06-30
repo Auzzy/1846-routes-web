@@ -149,6 +149,22 @@ function isEmpty(value) {
     return value === '' || value === null || value === undefined;
 }
 
+function loadGameState() {
+    // Wait until the map has finished loading to draw the saved map. This is likely to kick in if a cache-refresh page
+    // reload is issued.
+    $("#placed-tiles-board").one("load", loadFromLocalStoragePlacedTiles);
+
+    // If the image was cached, it may be loaded by the time the above event is attached, so load the saved map immdeiately.
+    if ($("#placed-tiles-board").get(0).complete) {
+        loadFromLocalStoragePlacedTiles();
+    }
+
+    loadFromLocalStorageRailroads();
+    loadFromLocalStorageRemovedRailroads();
+    loadFromLocalStoragePrivateCompanies();
+}
+
+
 // Scale the map to fit on the screen
 $("#placed-tiles-board").height("100%").css("height", "-=" + $("#placed-tiles-board").offset().top);
 
@@ -219,7 +235,6 @@ $("#global-import-export-modal").on("show.bs.modal", function() {
     enableSubmitViaKeyboard($("#global-import-export-modal"), $("#global-import-save"));
 });
 
-
 {% include "js/placed-tiles-map.js.html" %}
 
 {% include "js/placed-tiles-table.js.html" %}
@@ -233,5 +248,7 @@ $("#global-import-export-modal").on("show.bs.modal", function() {
 {% include "js/calculate.js.html" %}
 
 {% include "js/report-issue.js.html" %}
+
+loadGameState();
 
 {% endblock %}
