@@ -846,49 +846,37 @@ $("#confirm-clear-map-modal-confirm").click(function() {
     clearCalculateTab();
 });
 
-function importTiles(importText) {
-    return $.get("{{ url_for('legal_tile_coords') }}", {tile_coords: "[]"})
-        .then(async function(legalTileCoordsResponse) {
-            var importTableData = [];
-            await Promise.all(importText.trim().split("\n").map(rowStr => {
-                var rowData = rowStr.split(";").map(cell => cell.trim());
-                if (!legalTileCoordsResponse["tile-coords"].includes(rowData[0])) {
+async function importTiles(importText) {
+    var importTableData = [];
+    await Promise.all(importText.trim().split("\n").map(rowStr => {
+        var rowData = rowStr.split(";").map(cell => cell.trim());
+
+        return $.get("{{ url_for('legal_orientations') }}", {coord: rowData[0], tileId: rowData[1]})
+            .done(function(legalOrientationsResponse) {
+                var legalOrientations = legalOrientationsResponse["legal-orientations"];
+                if (isEmpty(legalOrientations) || !legalOrientations.includes(parseInt(rowData[2]))) {
                     return;
                 }
 
-                rowData[1] = parseInt(rowData[1]);
-                rowData[2] = parseInt(rowData[2]);
-
-                return $.when(
-                    $.get("{{ url_for('legal_tiles') }}", {coord: rowData[0]}),
-                    $.get("{{ url_for('legal_orientations') }}", {coord: rowData[0], tileId: rowData[1]})
-                ).done((legalTileIdsResponse, legalOrientationsResponse) => {
-                    var legalTileIds = legalTileIdsResponse[0]["legal-tile-ids"];
-                    var legalOrientations = legalOrientationsResponse[0]["legal-orientations"];
-                    
-                    if (!legalTileIds.includes(rowData[1]) || !legalOrientations.includes(rowData[2])) {
-                        return;
-                    }
-
-                    importTableData.push(rowData);
-                });
-            }));
-            return importTableData;
-        }).then(importTableData => {
-            var coordsInTable = [];
-            tilesTable = [];
-            importTableData.forEach(row => {
-                if (coordsInTable.includes(row[0])) {
-                    return;
-                }
-
-                coordsInTable.push(row[0]);
-                tilesTable.push(row.map(value => value.toString()));
+                importTableData.push(rowData);
             });
+    }));
 
-            drawMap();
-            drawTokens();
-        });
+    var coordsInTable = [];
+    tilesTable = [];
+    importTableData.forEach(row => {
+        if (coordsInTable.includes(row[0])) {
+            return;
+        }
+
+        coordsInTable.push(row[0]);
+        tilesTable.push(row.map(value => value.toString()));
+    });
+
+    drawMap();
+    drawTokens();
+
+    return Promise.resolve();
 }
 
 function prepareTilesForExport(exportTilesTable) {

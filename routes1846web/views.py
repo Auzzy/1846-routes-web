@@ -216,12 +216,40 @@ def _get_space(coord):
         if str(tile.cell) == coord:
             return tile
 
+def _legal_tile_ids_by_coord(coord):
+    space = _get_space(coord)
+    # If the coord is a built-in phase 4 tile
+    if space and space.phase is None:
+        return []
+
+    legal_tile_ids = []
+    for tile in _TILE_DICT.values():
+        if not space:
+            if tile.is_city or tile.is_z or tile.is_chicago:
+                continue
+        elif tile.phase <= space.phase:
+            continue
+        elif space.is_city != tile.is_city or space.is_z != tile.is_z or space.is_chicago != tile.is_chicago:
+            continue
+
+        if _get_orientations(coord, tile.id):
+            legal_tile_ids.append(tile.id)
+
+    return legal_tile_ids
+
 def _get_orientations(coord, tile_id):
-    cell = Cell.from_coord(coord)
+    if not coord or not tile_id:
+        return None
+
+    try:
+        cell = Cell.from_coord(coord)
+    except ValueError:
+        return None
 
     tile = tiles.get_tile(tile_id)
+    if not tile:
+        return None
 
-    from routes1846.placedtile import PlacedTile
     orientations = []
     for orientation in range(0, 6):
         try:
@@ -256,34 +284,14 @@ def board_tile_image():
 
 @app.route("/board/legal-tiles")
 def legal_tiles():
-    query = request.args.get("query")
     coord = request.args.get("coord")
 
-    LOG.info("Legal tiles request for {} (query: {}).".format(coord, query))
+    LOG.info(f"Legal tiles request for {coord}.")
 
-    space = _get_space(coord)
-    # If the coord is a built-in phase 4 tile
-    if space and space.phase is None:
-        return jsonify({"legal-tile-ids": []})
-
-    legal_tile_ids = []
-    for tile in _TILE_DICT.values():
-        if not space:
-            if tile.is_city or tile.is_z or tile.is_chicago:
-                continue
-        elif tile.phase <= space.phase:
-            continue
-        elif space.is_city != tile.is_city or space.is_z != tile.is_z or space.is_chicago != tile.is_chicago:
-            continue
-
-        if _get_orientations(coord, tile.id):
-            legal_tile_ids.append(tile.id)
-
+    legal_tile_ids = _legal_tile_ids_by_coord(coord)
     legal_tile_ids.sort()
-    if query:
-        legal_tile_ids = [tile_id for tile_id in legal_tile_ids if str(tile_id).startswith(query)]
 
-    LOG.info("Legal tiles response for {} (query: {}): {}".format(coord, query, legal_tile_ids))
+    LOG.info(f"Legal tiles response for {coord}: {legal_tile_ids}")
 
     return jsonify({"legal-tile-ids": legal_tile_ids})
 
@@ -299,7 +307,7 @@ def legal_orientations():
 
     LOG.info("Legal orientations response for {} at {} (query: {}): {}".format(tile_id, coord, query, orientations))
 
-    return jsonify({"legal-orientations": list(sorted(orientations))})
+    return jsonify({"legal-orientations": list(sorted(orientations)) if orientations is not None else orientations})
 
 @app.route("/board/tile-info")
 def board_tile_info():
