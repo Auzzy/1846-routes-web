@@ -84,6 +84,8 @@ with open(get_data_file("stations.json")) as stations_file:
     STATION_DATA = json.load(stations_file)
 
 _BASE_BOARD = board.Board.load()
+_BOARD_TILES = boardtile.load()
+_TILE_DICT = tiles._load_all()
 
 _TILE_COORDS = []
 
@@ -210,7 +212,7 @@ def calculate_worker(railroads_state_rows, private_companies_rows, board_state_r
 
 def _get_space(coord):
     space = None
-    for tile in boardtile.load():
+    for tile in _BOARD_TILES:
         if str(tile.cell) == coord:
             return tile
 
@@ -264,9 +266,8 @@ def legal_tiles():
     if space and space.phase is None:
         return jsonify({"legal-tile-ids": []})
 
-    from routes1846 import tiles
     legal_tile_ids = []
-    for tile in tiles._load_all().values():
+    for tile in _TILE_DICT.values():
         if not space:
             if tile.is_city or tile.is_z or tile.is_chicago:
                 continue
@@ -388,8 +389,7 @@ def cities():
 
     LOG.info("City request (query: {}).".format(query))
 
-    from routes1846 import boardtile
-    cities = [str(tile.cell) for tile in sorted(boardtile.load(), key=lambda tile: tile.cell) if tile.is_city and not tile.is_terminal_city]
+    cities = [str(tile.cell) for tile in sorted(_BOARD_TILES, key=lambda tile: tile.cell) if tile.is_city and not tile.is_terminal_city]
 
     if query:
         cities = [city for city in cities if city.startswith(query)]
