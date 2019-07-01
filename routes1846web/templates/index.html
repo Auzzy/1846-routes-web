@@ -245,6 +245,7 @@ if (remainingSpace < 300) {
 
 $("#global-import-save").click(function() {
     toggleEnableInput(false);
+    appIsLoading();
 
     $("#global-import-save").attr("disabled", true);
     $("#tile-import-export-textarea").attr("readonly", true);
@@ -276,6 +277,7 @@ $("#global-import-save").click(function() {
                                     }
 
                                     toggleEnableInput(true);
+                                    appIsDoneLoading();
                                 });
                         });
                 });
