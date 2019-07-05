@@ -686,8 +686,6 @@ $("#trains-modal-confirm").click(function() {
         trains = trains.concat(new Array(count).fill($(element).attr("data-train")));
     }).get();
 
-    updatePhase();
-
     var railroad = $("#trains-modal").attr("data-railroad");
     setRailroadTrains($(`#railroads-table tr[data-railroad='${railroad}']`), trains);
 
@@ -696,6 +694,7 @@ $("#trains-modal-confirm").click(function() {
     $("#calculate-submit").prop("disabled", !readyToSelectRailroad());
 
     updateLocalStorageRailroads();
+    updatePhase();
 });
 
 $("#stations-modal").on("show.bs.modal", function(event) {
