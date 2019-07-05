@@ -1,11 +1,8 @@
 import collections
 import json
-import logging
 import os
-import tempfile
-import traceback
 
-from flask import jsonify, render_template, request
+from flask import jsonify, render_template, request, url_for
 from flask_mail import Message
 from rq import Queue
 
@@ -96,7 +93,7 @@ def get_tile_coords():
         tile_coords = []
         for row, cols in sorted(_CELL_DB.items()):
             for col in sorted(cols):
-                coord = "{}{}".format(row, col)
+                coord = f"{row}{col}"
                 space = _get_space(coord)
                 # Explicitly allow I5 in order to allow placing stations from the map. Allowing all built-in phase 4
                 # tiles to be clickable would require some more special casing, so I determined this is "better"...
@@ -134,11 +131,11 @@ def calculate():
     railroad_name = request.form["railroad-name"]
 
     LOG.info("Calculate request.")
-    LOG.info("Target railroad: {}".format(railroad_name))
-    LOG.info("Private companies: {}".format(private_companies_rows))
-    LOG.info("Railroad input: {}".format(railroads_state_rows))
-    LOG.info("Removed railroads: {}".format(removed_railroads))
-    LOG.info("Board input: {}".format(board_state_rows))
+    LOG.info(f"Target railroad: {railroad_name}")
+    LOG.info(f"Private companies: {private_companies_rows}")
+    LOG.info(f"Railroad input: {railroads_state_rows}")
+    LOG.info(f"Removed railroads: {removed_railroads}")
+    LOG.info(f"Board input: {board_state_rows}")
 
     for row in railroads_state_rows:
         if row[3]:
@@ -154,7 +151,7 @@ def calculate():
 def calculate_result():
     routes_json = _get_calculate_result(request.args.get("jobId"))
 
-    LOG.info("Calculate response: {}".format(routes_json))
+    LOG.info(f"Calculate response: {routes_json}")
 
     return jsonify(routes_json)
 
@@ -172,7 +169,7 @@ def _get_calculate_result(job_id):
             else:
                 exc_info = json.loads(job.exc_info)
                 routes_json["error"] = {
-                    "message": "An error occurred during route calculation: {}".format(exc_info["message"]),
+                    "message": f"An error occurred during route calculation: {exc_info['message']}",
                     "traceback": exc_info["traceback"]
                 }
 
@@ -200,18 +197,18 @@ def cancel_calculate_request():
     return jsonify({})
 
 def calculate_worker(railroads_state_rows, private_companies_rows, board_state_rows, railroad_name):
-    board = boardstate.load([dict(zip(boardstate.FIELDNAMES, row)) for row in board_state_rows if any(val for val in row)])
-    railroad_dict = railroads.load(board, [dict(zip(railroads.FIELDNAMES, row)) for row in railroads_state_rows if any(val for val in row)])
-    private_companies.load(board, railroad_dict, [dict(zip(private_companies.FIELDNAMES, row)) for row in private_companies_rows if any(val for val in row)])
-    board.validate()
+    board_state = boardstate.load([dict(zip(boardstate.FIELDNAMES, row)) for row in board_state_rows if any(val for val in row)])
+    railroad_dict = railroads.load(board_state, [dict(zip(railroads.FIELDNAMES, row)) for row in railroads_state_rows if any(val for val in row)])
+    private_companies.load(board_state, railroad_dict, [dict(zip(private_companies.FIELDNAMES, row)) for row in private_companies_rows if any(val for val in row)])
+    board_state.validate()
 
     if railroad_name not in railroad_dict:
-        raise ValueError("Railroad chosen: \"{}\". Valid railroads: {}".format(railroad_name, ", ".join(railroad_dict.keys())))
+        valid_railroads = ", ".join(railroad_dict.keys())
+        raise ValueError(f"Railroad chosen: \"{railroad_name}\". Valid railroads: {valid_railroads}")
 
-    return find_best_routes(board, railroad_dict, railroad_dict[railroad_name])
+    return find_best_routes(board_state, railroad_dict, railroad_dict[railroad_name])
 
 def _get_space(coord):
-    space = None
     for tile in _BOARD_TILES:
         if str(tile.cell) == coord:
             return tile
@@ -273,7 +270,7 @@ def legal_tile_coords():
     if current_coord:
         legal_tile_coordinates.add(current_coord)
 
-    LOG.info("Legal tile coordinates response: {}".format(legal_tile_coordinates))
+    LOG.info(f"Legal tile coordinates response: {legal_tile_coordinates}")
 
     return jsonify({"tile-coords": list(sorted(legal_tile_coordinates))})
 
@@ -297,15 +294,14 @@ def legal_tiles():
 
 @app.route("/board/legal-orientations")
 def legal_orientations():
-    query = request.args.get("query")
     coord = request.args.get("coord")
     tile_id = request.args.get("tileId")
 
-    LOG.info("Legal orientations request for {} at {} (query: {}).".format(tile_id, coord, query))
+    LOG.info(f"Legal orientations request for {tile_id} at {coord}.")
 
     orientations = _get_orientations(coord, tile_id)
 
-    LOG.info("Legal orientations response for {} at {} (query: {}): {}".format(tile_id, coord, query, orientations))
+    LOG.info(f"Legal orientations response for {tile_id} at {coord}: {orientations}")
 
     return jsonify({"legal-orientations": list(sorted(orientations)) if orientations is not None else orientations})
 
@@ -346,7 +342,7 @@ def board_phase():
     else:
         phase = 1
 
-    LOG.info("Phase: %s", phase)
+    LOG.info(f"Phase: {phase}")
 
     return jsonify({"phase": phase})
 
@@ -358,7 +354,7 @@ def legal_railroads():
 
     legal_railroads = RAILROAD_NAMES - existing_railroads
 
-    LOG.info("Legal railroads response: {}".format(legal_railroads))
+    LOG.info(f"Legal railroads response: {legal_railroads}")
 
     return jsonify({
         "railroads": list(sorted(legal_railroads)),
@@ -373,7 +369,7 @@ def removable_railroads():
 
     removable_railroads = railroads.REMOVABLE_RAILROADS - existing_railroads
 
-    LOG.info("Removable railroads response: {}".format(removable_railroads))
+    LOG.info(f"Removable railroads response: {removable_railroads}")
 
     return jsonify({
         "railroads": list(sorted(removable_railroads)),
@@ -384,27 +380,22 @@ def removable_railroads():
 def trains():
     LOG.info("Train request.")
 
-    trains = [railroads.Train(train_attr[0], train_attr[1], phase) for train_attr, phase in railroads.TRAIN_TO_PHASE.items()]
-    train_strs = [str(train) for train in sorted(trains, key=lambda train: (train.collect, train.visit))]
+    all_trains = [railroads.Train(train_attr[0], train_attr[1], phase) for train_attr, phase in railroads.TRAIN_TO_PHASE.items()]
+    train_strs = [str(train) for train in sorted(all_trains, key=lambda train: (train.collect, train.visit))]
 
-    LOG.info("Train response: {}".format(trains))
+    LOG.info(f"Train response: {all_trains}")
 
     return jsonify({"trains": train_strs})
 
 @app.route("/railroads/cities")
 def cities():
-    query = request.args.get("query")
+    LOG.info("Cities request.")
 
-    LOG.info("City request (query: {}).".format(query))
+    all_cities = [str(tile.cell) for tile in sorted(_BOARD_TILES, key=lambda tile: tile.cell) if tile.is_city and not tile.is_terminal_city]
 
-    cities = [str(tile.cell) for tile in sorted(_BOARD_TILES, key=lambda tile: tile.cell) if tile.is_city and not tile.is_terminal_city]
+    LOG.info(f"Cities response: {all_cities}")
 
-    if query:
-        cities = [city for city in cities if city.startswith(query)]
-
-    LOG.info("City response (query: {}): {}".format(query, cities))
-
-    return jsonify({"cities": cities})
+    return jsonify({"cities": all_cities})
 
 @app.route("/railroads/legal-chicago-stations")
 def chicago_stations():
@@ -414,7 +405,7 @@ def chicago_stations():
 
     legal_stations = list(sorted(set(CHICAGO_STATION_COORDS.keys()) - existing_station_coords))
 
-    LOG.info("Legal Chicago stations response: {}".format(legal_stations))
+    LOG.info(f"Legal Chicago stations response: {legal_stations}")
 
     return jsonify({"chicago-stations": legal_stations})
 
@@ -422,13 +413,13 @@ def chicago_stations():
 def legal_token_coords():
     company_name = request.args.get("companyName")
 
-    LOG.info("Legal %s token coordinate request.", company_name)
+    LOG.info(f"Legal {company_name} token coordinate request.")
 
     coords = PRIVATE_COMPANY_COORDS.get(company_name)
     if coords is None:
-        raise ValueError("Received unsupport private company name: {}".format(company_name))
+        raise ValueError(f"Received unsupport private company name: {company_name}")
 
-    LOG.info("Legal %s token coordinate response: %s", company_name, coords)
+    LOG.info(f"Legal {company_name} token coordinate response: {coords}")
 
     return jsonify({"coords": coords})
 
