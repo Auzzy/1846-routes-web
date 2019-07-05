@@ -29,6 +29,13 @@ function getIndependentRailroadsAsTable() {
     return getPrivateCompaniesAsTable().filter(company => indRailroadNames.includes(company[0]));
 }
 
+function getPrivateCompanySpaceInfo(coord, privateCompanyName, callback) {
+    $.get("{{ url_for('board_private_company_info') }}", {coord: coord, company: privateCompanyName})
+        .done(function(response) {
+            callback(response["info"]);
+        });
+}
+
 function setPrivateCompanyTokenCoord(privateCompanyRow, tokenCoord) {
     var companyName = privateCompanyRow.attr("data-name");
     if (companyName === "Big 4") {
@@ -237,9 +244,7 @@ function privateCompanyNewRow(companyName) {
                     .addClass("oi oi-delete"))
                     .click(function() {
                         removePrivateCompany($(this).parents("tr").attr("data-name"));
-                        if (indRailroadNames.includes(sourceRow.attr("data-name"))) {
-                            drawTokens();
-                        }
+                        drawTokens();
                     })));
 }
 
@@ -278,6 +283,8 @@ function populatePrivateCompanyTokenCoordDropdown(sourceRow) {
                         .text(itemHtml)
                         .click(function() {
                             setPrivateCompanyTokenCoord(sourceRow, $(this).attr("data-coord"));
+
+                            drawTokens();
 
                             sourceRow.find(".company-token button").focus();
 

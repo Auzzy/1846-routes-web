@@ -80,6 +80,9 @@ PRIVATE_COMPANY_COORDS = {
 with open(get_data_file("stations.json")) as stations_file:
     STATION_DATA = json.load(stations_file)
 
+with open(get_data_file("private-companies.json")) as private_company_file:
+    PRIVATE_COMPANY_DATA = json.load(private_company_file)
+
 _BASE_BOARD = board.Board.load()
 _BOARD_TILES = boardtile.load()
 _TILE_DICT = tiles._load_all()
@@ -321,6 +324,21 @@ def board_tile_info():
 
     info = {
         "capacity": tile.capacity,
+        "offset": offset
+    }
+
+    return jsonify({"info": info})
+
+@app.route("/board/private-company-info")
+def board_private_company_info():
+    coord = request.args.get("coord")
+    company = request.args.get("company")
+
+    default_offset = {"x": 0, "y": 0}
+    offset_data = PRIVATE_COMPANY_DATA[company]
+    offset = offset_data.get(coord, {}).get("offset", default_offset)
+
+    info = {
         "offset": offset
     }
 

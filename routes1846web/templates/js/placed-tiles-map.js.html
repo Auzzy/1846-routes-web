@@ -260,7 +260,55 @@ function drawTokens() {
                     }
                 });
             }
+            if (result["phase"] < 4) {
+                getPrivateCompaniesAsTable().forEach(company => {
+                    if (["Steamboat Company", "Meat Packing Company"].includes(company[0])) {
+                        if (!isEmpty(company[1]) && !isEmpty(company[2])) {
+                            drawPrivateCompanyOnMap(company[2].trim(), company[0]);
+                        }
+                    }
+                });
+            }
         });
+}
+
+function drawPrivateCompanyOnMap(coord, privateCompanyName) {
+    var stationCanvas = $("#stations-canvas").get(0);
+    var stationContext = stationCanvas.getContext("2d");
+
+    var rowAndCol = coordToRowAndCol(coord);
+    var spacePoints = getTilePoints(stationCanvas, rowAndCol.row, rowAndCol.col);
+    var spaceOrigin = getTileTopLeft(stationCanvas, rowAndCol.row, rowAndCol.col);
+    var spaceSize = {
+        width: Math.max(...spacePoints.map(coord => coord.x)) - Math.min(...spacePoints.map(coord => coord.x)),
+        height: Math.max(...spacePoints.map(coord => coord.y)) - Math.min(...spacePoints.map(coord => coord.y))
+    };
+
+    var imgSrc = `{{ url_for('static', filename='images/tokens') }}/${privateCompanyName}.png`;
+
+    var tokenImage = new Image();
+    tokenImage.src = imgSrc;
+    tokenImage.width = spaceSize.width * 0.20;
+    tokenImage.height = spaceSize.height * 0.175;
+
+    getPrivateCompanySpaceInfo(coord, privateCompanyName, (spaceInfo) => {
+        // Draws the token after it's loaded...
+        $(tokenImage).one("load", function() {
+            drawPrivateCompany(stationContext, tokenImage, spaceOrigin, spaceInfo);
+        });
+
+        // ...as well as if it was already loaded
+        drawPrivateCompany(stationContext, tokenImage, spaceOrigin, spaceInfo);
+    });
+}
+
+function drawPrivateCompany(context, tokenImage, spaceOrigin, spaceInfo) {
+    var offset = spaceInfo["offset"];
+
+    var x = spaceOrigin.x + tokenImage.width * offset["x"] - tokenImage.width / 2;
+    var y = spaceOrigin.y + tokenImage.height * offset["y"];
+
+    context.drawImage(tokenImage, x, y, tokenImage.width, tokenImage.height);
 }
 
 function drawStationOnMap(coord, chicago, stationCount, railroadName) {
