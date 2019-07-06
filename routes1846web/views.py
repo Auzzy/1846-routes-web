@@ -324,7 +324,8 @@ def board_tile_info():
 
     info = {
         "capacity": tile.capacity,
-        "offset": offset
+        "offset": offset,
+        "phase": tile.phase
     }
 
     return jsonify({"info": info})
@@ -333,10 +334,14 @@ def board_tile_info():
 def board_private_company_info():
     coord = request.args.get("coord")
     company = request.args.get("company")
+    phase = request.args.get("phase")
 
     default_offset = {"x": 0, "y": 0}
     offset_data = PRIVATE_COMPANY_DATA[company]
     offset = offset_data.get(coord, {}).get("offset", default_offset)
+
+    if coord == str(CHICAGO_CELL):
+        offset = offset.get(phase, default_offset) if phase and phase in offset else offset.get("default", default_offset)
 
     info = {
         "offset": offset

@@ -245,7 +245,8 @@ function drawTokens() {
     }));
     $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
         .done(result => {
-            if (result["phase"] < 3) {
+            var phase = result["phase"];
+            if (phase < 3) {
                 getPrivateCompaniesAsTable().forEach(company => {
                     if (indRailroadNames.includes(company[0])) {
                         if (isEmpty(company[1])) {
@@ -260,7 +261,7 @@ function drawTokens() {
                     }
                 });
             }
-            if (result["phase"] < 4) {
+            if (phase < 4) {
                 getPrivateCompaniesAsTable().forEach(company => {
                     if (["Steamboat Company", "Meat Packing Company"].includes(company[0])) {
                         if (!isEmpty(company[1]) && !isEmpty(company[2])) {
