@@ -431,10 +431,110 @@ function mapPointToTile(img, point) {
         for (; col < 21; col += 2) {
             var tilePoints = getTilePoints(img, row, col);
             if (isPointInPoly(tilePoints, point)) {
-                return {row: row, col: col}
+                return {row: row, col: col};
             }
         }
     }
+}
+
+function populateTileSelectorPrivateCompanyDropdown(privateCompanyContent, coord) {
+    var dropdownMenu = privateCompanyContent.find(".dropdown-menu");
+    dropdownMenu.empty();
+
+    var companyName = privateCompanyContent.attr("data-name");
+    var companyRow = getPrivateCompaniesAsTable().find(row => row[0] === companyName);
+
+    getRailroadsAsTable()
+        .forEach(railroad => {
+            if (companyRow[2] === coord && companyRow[1] === railroad[0]) {
+                return;
+            }
+
+            dropdownMenu
+                .append($("<a></a>")
+                    .addClass("dropdown-item")
+                    .attr("data-owner", railroad[0])
+                    .attr("href", "#")
+                    .text(railroad[0])
+                    .click(function() {
+                        var row = getPrivateCompanyRow(privateCompanyContent.attr("data-name"));
+                        setPrivateCompanyOwner(row, $(this).attr("data-owner"));
+                        setPrivateCompanyTokenCoord(row, coord);
+                        drawTokens();
+
+                        tileSelectorPrivateCompaniesDisplayOwner(privateCompanyContent, true);
+
+                        updateLocalStoragePrivateCompanies();
+                    }));
+        });
+}
+
+function tileSelectorPrivateCompaniesDisplayOwner(privateCompanyContent, isTokenHere) {
+    privateCompanyContent.find("div[data-owner]").remove();
+
+    var companyName = privateCompanyContent.attr("data-name");
+    var ownerName = getPrivateCompaniesAsTable().find(row => row[0] === companyName)[1];
+    if (isTokenHere && !isEmpty(ownerName)) {
+        privateCompanyContent.find(".dropdown-toggle").text(`Change ${companyName} owner`);
+
+        privateCompanyContent
+            .append($("<div></div>")
+                .css("margin-top", 10)
+                .attr("data-owner", ownerName)
+                .append($("<span></span>")
+                    .css("font-weight", "bold")
+                    .text("Owner"))
+                .append($("<span></span>")
+                    .css("margin-left", 5)
+                    .text(ownerName))
+                .append($("<button></button>")
+                    .addClass("btn btn-sm btn-outline-danger")
+                    .css("margin-left", 10)
+                    .attr("type", "button")
+                    .append($("<span></span>")
+                        .addClass("oi oi-delete"))
+                    .click(function() {
+                        removePrivateCompany(`${companyName}`);
+                        tileSelectorPrivateCompaniesDisplayOwner(privateCompanyContent, false);
+                        drawTokens();
+                    })));
+    } else {
+        privateCompanyContent.find(".dropdown-toggle").text(`Place ${companyName} token`);
+    }
+}
+
+function populatePrivateCompanies(coord) {
+    $("#tile-selector-private-companies-content").empty();
+
+    ["Steamboat Company", "Meat Packing Company"].forEach(companyName => {
+        $.get("{{ url_for('legal_token_coords') }}", {companyName: companyName})
+            .done(result => {
+                if (result["coords"].includes(coord)) {
+                    var companyRow = getPrivateCompaniesAsTable().find(row => row[0] === companyName);
+                    var privateCompanyContent = $("<div></div>")
+                        .attr("data-name", `${companyName}`)
+                        .append($("<div></div>")
+                            .addClass("dropdown")
+                            .append($("<button></button>")
+                                .addClass("btn btn-sm btn-outline-success dropdown-toggle")
+                                .attr("type", "button")
+                                .attr("data-toggle", "dropdown")
+                                .attr("aria-haspopup", "true")
+                                .attr("aria-expanded", "false")
+                                .text(`Place ${companyName} token`))
+                            .append($("<div></div>")
+                                .addClass("dropdown-menu"))
+                            .on("show.bs.dropdown", function() {
+                                populateTileSelectorPrivateCompanyDropdown($(privateCompanyContent), coord);
+                            }));
+
+                    var isTokenHere = !isEmpty(companyRow[2]) && companyRow[2] === coord;
+                    tileSelectorPrivateCompaniesDisplayOwner($(privateCompanyContent), isTokenHere);
+
+                    $("#tile-selector-private-companies-content").append(privateCompanyContent);
+                }
+            });
+    });
 }
 
 function placeStationButton(parent, coord, neighbor) {
@@ -846,6 +946,7 @@ function openTileSelectionModal(rowAndCol) {
             highlightCoord(coord);
             populateTiles(coord);
             populateStations(coord);
+            populatePrivateCompanies(coord);
 
             // Ensure the modal always shows tiles when opened
             $("#tile-selector-tiles").click();
