@@ -317,9 +317,11 @@ function populatePrivateCompanyOwnerDropdown(sourceRow) {
                     .attr("href", "#")
                     .text(railroad)
                     .click(function() {
+                        var oldCoord = sourceRow.attr("data-coord");
+
                         setPrivateCompanyOwner(sourceRow, $(this).attr("data-owner"));
 
-                        if (indRailroadNames.includes(sourceRow.attr("data-name"))) {
+                        if (indRailroadNames.includes(sourceRow.attr("data-name")) || !isEmpty(oldCoord)) {
                             drawTokens();
                         }
 
