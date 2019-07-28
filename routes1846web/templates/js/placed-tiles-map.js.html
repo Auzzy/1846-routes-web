@@ -928,9 +928,6 @@ function populateTiles(coord) {
 
             if (result["legal-tile-ids"].length === 0) {
                 $("#tile-selector-tiles").hide();
-                if (cityNames.hasOwnProperty(coord)) {
-                    $("#tile-selector-stations").click();
-                }
             } else {
                 $("#tile-selector-tiles").show();
             }
@@ -1054,6 +1051,7 @@ $("#tile-selector").on("show.bs.modal", function() {
 
 $("#tile-selector").on("shown.bs.modal", function() {
     keepOnScreen($("#tile-selector-tiles-content"), $("#tile-orientations"));
+    $("#tile-selector-modal-body-tabs .nav-item a:visible").first().click();
 });
 
 $("#tile-selector").on("hidden.bs.modal", function() {
