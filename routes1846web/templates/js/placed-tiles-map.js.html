@@ -1,14 +1,15 @@
 var legalCoords = {{ tile_coords | safe }};
-var firstCoord = legalCoords[0]
-var lastCoord = legalCoords[legalCoords.length - 1]
+var firstCoord = legalCoords[0];
+var lastCoord = legalCoords[legalCoords.length - 1];
 var currentCoordFocus = undefined;
-var cityNames = {{ city_names | safe }}
+var cityNames = {{ city_names | safe }};
 var routeColors = [
     "rgba(0, 255, 255, 0.8)",  // cyan
     "rgba(255, 0, 255, 0.8)",  // fuchsia
     "rgba(255, 178, 127, 1)",  // light tangelo
     "rgba(255, 0, 0, 0.8)"     // red
 ];
+var terminalCityBoundaries = {{ terminal_city_boundaries | safe }};
 
 function repositionCanvases() {
     var mapImage = $("#placed-tiles-board").get(0);
@@ -504,56 +505,67 @@ function tileSelectorPrivateCompaniesDisplayOwner(privateCompanyContent, isToken
 }
 
 function populatePrivateCompanies(coord) {
-    $("#tile-selector-private-companies-content").empty();
-
-    // This slightly awkward construction allows checking if this space
-    // is a legal spot for any private company.
-
-    var companyNames = ["Steamboat Company", "Meat Packing Company"];
-    var tokenCoordPromises = Promise.all(companyNames.map(companyName => {
-        return $.get("{{ url_for('legal_token_coords') }}", {companyName: companyName})
+    var allTrains = new Array().concat(...getRailroadsAsTable().map(railroad => {
+        return isEmpty(railroad[1]) ? [] : railroad[1].split(",").map(value => value.trim());
     }));
+    $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
+        .done(result => {
+            $("#tile-selector-private-companies-content").empty();
 
-    $.when(tokenCoordPromises)
-        .then(function(tokenCoordResponses) {
-            var validCompanyNames = tokenCoordResponses
-                .map((response, index) => [companyNames[index], response["coords"]])
-                .filter(nameAndCoords => nameAndCoords[1].includes(coord))
-                .map(nameAndCoords => nameAndCoords[0]);
-
-            if (validCompanyNames.length === 0) {
+            if (result["phase"] >= 4) {
                 $("#tile-selector-private-companies").hide();
                 return;
             }
 
-            $("#tile-selector-private-companies").show();
-
-            validCompanyNames.forEach(companyName => {
-                var companyRow = getPrivateCompaniesAsTable().find(row => row[0] === companyName);
-                var privateCompanyContent = $("<div></div>")
-                    .attr("data-name", `${companyName}`)
-                    .css("margin-bottom", 10)
-                    .append($("<div></div>")
-                        .addClass("dropdown")
-                        .append($("<button></button>")
-                            .addClass("btn btn-sm btn-outline-success dropdown-toggle")
-                            .attr("type", "button")
-                            .attr("data-toggle", "dropdown")
-                            .attr("aria-haspopup", "true")
-                            .attr("aria-expanded", "false")
-                            .text(`Place ${companyName} token`))
-                        .append($("<div></div>")
-                            .addClass("dropdown-menu"))
-                        .on("show.bs.dropdown", function() {
-                            populateTileSelectorPrivateCompanyDropdown($(privateCompanyContent), coord);
-                        }));
-
-                var isTokenHere = !isEmpty(companyRow[2]) && companyRow[2] === coord;
-                tileSelectorPrivateCompaniesDisplayOwner($(privateCompanyContent), isTokenHere);
-
-                $("#tile-selector-private-companies-content").append(privateCompanyContent);
+            // This slightly awkward construction allows checking if this space
+            // is a legal spot for any private company.
+        
+            var companyNames = ["Steamboat Company", "Meat Packing Company"];
+            var tokenCoordPromises = Promise.all(companyNames.map(companyName => {
+                return $.get("{{ url_for('legal_token_coords') }}", {companyName: companyName})
+            }));
+        
+            $.when(tokenCoordPromises)
+                .then(function(tokenCoordResponses) {
+                    var validCompanyNames = tokenCoordResponses
+                        .map((response, index) => [companyNames[index], response["coords"]])
+                        .filter(nameAndCoords => nameAndCoords[1].includes(coord))
+                        .map(nameAndCoords => nameAndCoords[0]);
+        
+                    if (validCompanyNames.length === 0) {
+                        $("#tile-selector-private-companies").hide();
+                        return;
+                    }
+        
+                    $("#tile-selector-private-companies").show();
+        
+                    validCompanyNames.forEach(companyName => {
+                        var companyRow = getPrivateCompaniesAsTable().find(row => row[0] === companyName);
+                        var privateCompanyContent = $("<div></div>")
+                            .attr("data-name", `${companyName}`)
+                            .css("margin-bottom", 10)
+                            .append($("<div></div>")
+                                .addClass("dropdown")
+                                .append($("<button></button>")
+                                    .addClass("btn btn-sm btn-outline-success dropdown-toggle")
+                                    .attr("type", "button")
+                                    .attr("data-toggle", "dropdown")
+                                    .attr("aria-haspopup", "true")
+                                    .attr("aria-expanded", "false")
+                                    .text(`Place ${companyName} token`))
+                                .append($("<div></div>")
+                                    .addClass("dropdown-menu"))
+                                .on("show.bs.dropdown", function() {
+                                    populateTileSelectorPrivateCompanyDropdown($(privateCompanyContent), coord);
+                                }));
+        
+                        var isTokenHere = !isEmpty(companyRow[2]) && companyRow[2] === coord;
+                        tileSelectorPrivateCompaniesDisplayOwner($(privateCompanyContent), isTokenHere);
+        
+                        $("#tile-selector-private-companies-content").append(privateCompanyContent);
+                    });
             });
-    });
+        });
 }
 
 function placeStationButton(parent, coord, neighbor) {
@@ -866,12 +878,6 @@ function populateTiles(coord) {
         $(source).addClass("active");
     }
 
-    if (cityNames.hasOwnProperty(coord)) {
-        $("#tileSelectorLabel").text(cityNames[coord] + " (" + coord + ")");
-    } else {
-        $("#tileSelectorLabel").text(coord);
-    }
-
     $("#delete-tile-button").attr("data-coord", coord);
 
     $.get("{{ url_for('legal_tiles') }}", {coord: coord})
@@ -937,6 +943,14 @@ function populateTiles(coord) {
         });
 }
 
+function setTileSelectorModalHeader(coord) {
+    if (cityNames.hasOwnProperty(coord)) {
+        $("#tileSelectorLabel").text(cityNames[coord] + " (" + coord + ")");
+    } else {
+        $("#tileSelectorLabel").text(coord);
+    }
+}
+
 function keepOnScreen(viewport, content) {
     // Don't let the bottom of the tile orientation list pass the bottom of the modal viewport
     var viewportBottom = viewport.offset().top + viewport.height();
@@ -957,20 +971,60 @@ $("#tile-selector-tiles-content").scroll(function(event) {
     keepOnScreen($("#tile-selector-tiles-content"), $("#tile-orientations"));
 });
 
-function openTileSelectionModal(rowAndCol) {
-    if (rowAndCol !== undefined) {
+function getClickableTerminalCityCoord(pointOnImage) {
+    var mapImage = $("#tile-focus-canvas").get(0);
+
+    var terminalContext = mapImage.getContext("2d");
+    terminalContext.strokeStyle = "rgba(0, 255, 255, 0.5)";
+    terminalContext.lineWidth = 3;
+
+    for (var name in terminalCityBoundaries) {
+        var boundaryPoints = terminalCityBoundaries[name].map(data => {
+            return {x: data.x * mapImage.width, y: data.y * mapImage.height}
+        });
+
+        if (isPointInPoly(boundaryPoints, pointOnImage)) {
+            return Object.entries(cityNames).find(coordAndName => name === coordAndName[1])[0];
+        }
+    }
+
+    return undefined;
+}
+
+function openTileSelectionModal(rowAndCol, pointOnImage) {
+    var clickableTerminalCityCoord = getClickableTerminalCityCoord(pointOnImage);
+    if (clickableTerminalCityCoord !== undefined) {
+        var allTrains = new Array().concat(...getRailroadsAsTable().map(railroad => {
+            return isEmpty(railroad[1]) ? [] : railroad[1].split(",").map(value => value.trim());
+        }));
+        $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
+            .done(result => {
+                if (result["phase"] >= 4) {
+                    return;
+                }
+
+                clearAllHighlights();
+                setTileSelectorModalHeader(clickableTerminalCityCoord);
+                populatePrivateCompanies(clickableTerminalCityCoord);
+        
+                $("#tile-selector-tiles").hide();
+                $("#tile-selector-stations").hide();
+                $("#tile-selector").modal("show");
+            });
+    } else if (rowAndCol !== undefined) {
         var coord = rowAndColToCoord(rowAndCol);
         if (legalCoords.includes(coord)) {
             clearAllHighlights();
             highlightCoord(coord);
+            setTileSelectorModalHeader(coord);
             populateTiles(coord);
             populateStations(coord);
             populatePrivateCompanies(coord);
 
             // Ensure the modal always shows tiles when opened
             $("#tile-selector-tiles").click();
-            $('#tile-selector').attr("data-coord", coord);
-            $('#tile-selector').modal('show');
+            $("#tile-selector").attr("data-coord", coord);
+            $("#tile-selector").modal("show");
         }
     }
 }
@@ -980,7 +1034,7 @@ $("#tile-focus-canvas").click(canDisable(function(event) {
     var posYOnImg = event.pageY - $("#tile-focus-canvas").offset().top;
 
     var rowAndCol = mapPointToTile($("#tile-focus-canvas").get(0), {x: posXOnImg, y: posYOnImg});
-    openTileSelectionModal(rowAndCol);
+    openTileSelectionModal(rowAndCol, {x: posXOnImg, y: posYOnImg});
 }));
 
 $("#delete-tile-button").click(function(event) {

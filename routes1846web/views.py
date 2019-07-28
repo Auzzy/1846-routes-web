@@ -83,6 +83,9 @@ with open(get_data_file("stations.json")) as stations_file:
 with open(get_data_file("private-companies.json")) as private_company_file:
     PRIVATE_COMPANY_DATA = json.load(private_company_file)
 
+with open(get_data_file("terminal-cities.json")) as terminal_cities_file:
+    TERMINAL_CITY_DATA = json.load(terminal_cities_file)
+
 _BASE_BOARD = board.Board.load()
 _BOARD_TILES = boardtile.load()
 _TILE_DICT = tiles._load_all()
@@ -116,6 +119,8 @@ def main():
             name = "Chicago Conn." if space.name == "Chicago Connections" else space.name
             city_names[str(cell)] = name
 
+    terminal_city_boundaries = {name: info["boundaries"] for name, info in TERMINAL_CITY_DATA.items()}
+
     return render_template("index.html",
             railroads_colnames=RAILROADS_COLUMN_NAMES,
             independent_railroad_home_cities=private_companies.HOME_CITIES,
@@ -123,7 +128,8 @@ def main():
             private_company_colnames=PRIVATE_COMPANY_COLUMN_NAMES,
             placed_tiles_colnames=PLACED_TILES_COLUMN_NAMES,
             tile_coords=get_tile_coords(),
-            city_names=city_names)
+            city_names=city_names,
+            terminal_city_boundaries=terminal_city_boundaries)
 
 @app.route("/calculate", methods=["POST"])
 def calculate():
