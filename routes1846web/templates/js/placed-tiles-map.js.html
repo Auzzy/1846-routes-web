@@ -241,12 +241,8 @@ function drawTokens() {
         stationCountByCoord[coord]++;
     });
 
-    var allTrains = new Array().concat(...getRailroadsAsTable().map(railroad => {
-        return isEmpty(railroad[1]) ? [] : railroad[1].split(",").map(value => value.trim());
-    }));
-    $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
-        .done(result => {
-            var phase = result["phase"];
+    getPhase()
+        .done(phase => {
             if (phase < 3) {
                 getPrivateCompaniesAsTable().forEach(company => {
                     if (indRailroadNames.includes(company[0])) {
@@ -505,14 +501,11 @@ function tileSelectorPrivateCompaniesDisplayOwner(privateCompanyContent, isToken
 }
 
 function populatePrivateCompanies(coord) {
-    var allTrains = new Array().concat(...getRailroadsAsTable().map(railroad => {
-        return isEmpty(railroad[1]) ? [] : railroad[1].split(",").map(value => value.trim());
-    }));
-    $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
-        .done(result => {
+    getPhase()
+        .done(phase => {
             $("#tile-selector-private-companies-content").empty();
 
-            if (result["phase"] >= 4) {
+            if (phase >= 4) {
                 $("#tile-selector-private-companies").hide();
                 return;
             }
@@ -627,13 +620,10 @@ function tileModalStationEntry(coord, railroadName) {
 }
 
 function populateStations(coord) {
-    var allTrains = new Array().concat(...getRailroadsAsTable().map(railroad => {
-        return isEmpty(railroad[1]) ? [] : railroad[1].split(",").map(value => value.trim());
-    }));
-    $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
-        .done(result => {
+    getPhase()
+        .done(phase => {
             var railroadsAtCoord = getRailroadsAsTable();
-            if (result["phase"] < 3) {
+            if (phase < 3) {
                 railroadsAtCoord = railroadsAtCoord
                     .concat(getIndependentRailroadsAsTable()
                         .filter(railroad => isEmpty(railroad[1])));
@@ -991,12 +981,9 @@ function getClickableTerminalCityCoord(pointOnImage) {
 function openTileSelectionModal(rowAndCol, pointOnImage) {
     var clickableTerminalCityCoord = getClickableTerminalCityCoord(pointOnImage);
     if (clickableTerminalCityCoord !== undefined) {
-        var allTrains = new Array().concat(...getRailroadsAsTable().map(railroad => {
-            return isEmpty(railroad[1]) ? [] : railroad[1].split(",").map(value => value.trim());
-        }));
-        $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
-            .done(result => {
-                if (result["phase"] >= 4) {
+        getPhase()
+            .done(phase => {
+                if (phase >= 4) {
                     return;
                 }
 

@@ -115,14 +115,20 @@ function setRailroadTrains(railroadRow, trains) {
     railroadRow.attr("data-trains", trainsDisplay.attr("data-trains"));
 }
 
-function updatePhase() {
+function getPhase() {
     var allTrains = new Array().concat(...getRailroadsAsTable().map(railroad => {
         return isEmpty(railroad[1]) ? [] : railroad[1].split(",").map(value => value.trim());
     }));
+    return $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
+        .then(result => {
+            return result["phase"];
+        });
+}
 
-    $.get("{{ url_for('board_phase') }}", {trains: JSON.stringify(Array.from(new Set(allTrains)))})
-        .done(result => {
-            $("#board-phase").text(result["phase"]);
+function updatePhase() {
+    getPhase()
+        .done(phase => {
+            $("#board-phase").text(phase);
         });
 }
 
