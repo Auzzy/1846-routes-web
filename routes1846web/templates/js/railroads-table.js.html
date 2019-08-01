@@ -161,7 +161,7 @@ function importRailroads(importText) {
     var importRows = importText.trim().split("\n");
     var tableData = importRows
         .map(row => {
-            return row.split(";")
+            return row.split(";", 4)
                 .map(cell => cell.trim().split(",")
                     .map(value => value.trim())
                     .filter(value => !isEmpty(value)));

@@ -1057,7 +1057,7 @@ $("#confirm-clear-map-modal-confirm").click(function() {
 async function importTiles(importText) {
     var importTableData = [];
     await Promise.all(importText.trim().split("\n").map(rowStr => {
-        var rowData = rowStr.split(";").map(cell => cell.trim());
+        var rowData = rowStr.split(";", 3).map(cell => cell.trim());
 
         return $.get("{{ url_for('legal_orientations') }}", {coord: rowData[0], tileId: rowData[1]})
             .done(function(legalOrientationsResponse) {
