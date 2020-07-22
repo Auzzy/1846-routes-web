@@ -152,7 +152,7 @@ def calculate():
 
     railroads_state_rows += [[name, "removed"] for name in removed_railroads]
 
-    job = CALCULATOR_QUEUE.enqueue(calculate_worker, railroads_state_rows, private_companies_rows, board_state_rows, railroad_name, job_timeout="5m")
+    job = CALCULATOR_QUEUE.enqueue(calculate_worker, railroads_state_rows, private_companies_rows, board_state_rows, railroad_name, timeout="5m")
 
     return jsonify({"jobId": job.id})
 
