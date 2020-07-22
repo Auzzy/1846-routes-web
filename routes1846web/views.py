@@ -10,7 +10,7 @@ from routes1846 import board, boardstate, boardtile, find_best_routes, private_c
 from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell, board_cells
 
 from routes1846web.routes1846web import app, get_data_file, mail
-from routes1846web.calculator import CancellableJob, cancel_job, redis_conn
+from routes1846web.calculator import redis_conn
 from routes1846web.logger import get_logger, init_logger, set_log_format
 
 
@@ -21,7 +21,7 @@ set_log_format(LOG)
 init_logger(LIB_LOG, "LIB_LOG_LEVEL", 0)
 set_log_format(LIB_LOG)
 
-CALCULATOR_QUEUE = Queue(connection=redis_conn, job_class=CancellableJob)
+CALCULATOR_QUEUE = Queue(connection=redis_conn)
 
 MESSAGE_BODY_FORMAT = "User: {user}\nComments:\n{comments}"
 TILE_MESSAGE_BODY_FORMAT = MESSAGE_BODY_FORMAT + "\nSelected:\n\tcoordinate: {coord}\n\ttile: {tile_id}\n\torientation: {orientation}"
@@ -171,25 +171,16 @@ def _get_calculate_result(job_id):
     # If job is None, it means the job ID couldn't be found, either because it's invalid, or the job was cancelled.
     if job:
         if job.is_failed:
-            # Cancelled and timeout are specific reasons for a failed state.
-            if job.is_cancelled:
-                # Signal job termination, but don't provide a reason. This causes the display to not be impacted.
-                pass
-            elif job.is_timeout:
-                routes_json["error"] = {
-                    "message": "The route calculation timed out."
-                }
+            # The job experienced an error
+            if not job.exc_info:
+                # The error info hasn't propagated yet, so act as if the job is still in progress
+                routes_json["jobId"] = job_id
             else:
-                # The job experienced an error
-                if not job.exc_info:
-                    # The error info hasn't propagated yet, so act as if the job is still in progress
-                    routes_json["jobId"] = job_id
-                else:
-                    exc_info = json.loads(job.exc_info)
-                    routes_json["error"] = {
-                        "message": f"An error occurred during route calculation: {exc_info['message']}",
-                        "traceback": exc_info["traceback"]
-                    }
+                exc_info = json.loads(job.exc_info)
+                routes_json["error"] = {
+                    "message": f"An error occurred during route calculation: {exc_info['message']}",
+                    "traceback": exc_info["traceback"]
+                }
 
         elif job.is_finished:
             routes_json["routes"] = []
@@ -209,10 +200,9 @@ def _get_calculate_result(job_id):
 @app.route("/calculate/cancel", methods=["POST"])
 def cancel_calculate_request():
     job_id = request.form.get("jobId")
-
-    LOG.info(f"Cancelling job: {job_id}")
-
-    cancel_job(job_id)
+    job = CALCULATOR_QUEUE.fetch_job(job_id)
+    if job:
+        job.delete()
     return jsonify({})
 
 def calculate_worker(railroads_state_rows, private_companies_rows, board_state_rows, railroad_name):
