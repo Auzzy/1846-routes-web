@@ -1,8 +1,10 @@
 routes-1846 == 0.21
 
-Flask == 1.0.2
-Flask-WTF==0.14.2
+Flask == 1.1.2
+Flask-WTF==0.14.3
 Flask-Mail == 0.9.1
 
 redis == 2.10.6
 rq == 0.12
+
+requests == 2.24.0
