@@ -1,6 +1,7 @@
 import collections
 import json
 import os
+import requests
 
 from flask import jsonify, render_template, request, url_for
 from flask_mail import Message
@@ -107,6 +108,31 @@ def get_tile_coords():
                     tile_coords.append(coord)
         _TILE_COORDS = tile_coords
     return _TILE_COORDS
+
+@app.route("/migrate", methods=["POST"])
+def migrate():
+    LOG.info("Migration requested")
+
+    migration_data = request.form["migrationData"]
+    if not migration_data:
+        LOG.debug("Migration failure: no data provided")
+        return jsonify({"error": "No data provided."}), 400
+
+    url_18xx = os.environ.get("URL18XX")
+    if not url_18xx:
+        LOG.debug("Migration failure: could not find the URL for the 18xx app.")
+        return jsonify({"error": "Failed to begin."}), 500
+
+    LOG.debug("Initiating migration to 18xx")
+    response = requests.post(f"{url_18xx}/migrate/start", data=migration_data)
+    response_json = response.json()
+    if response.ok:
+        response_json["target"] = url_18xx
+        LOG.debug(f"Migration: received migration id {response_json['id']}.")
+    else:
+        LOG.debug(f"Migration failure: {response_json['error']}")
+
+    return jsonify(response_json), response.status_code
 
 @app.route("/")
 def main():
