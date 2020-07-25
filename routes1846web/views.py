@@ -10,7 +10,7 @@ from routes1846 import board, boardstate, boardtile, find_best_routes, private_c
 from routes1846.cell import _CELL_DB, CHICAGO_CELL, Cell, board_cells
 
 from routes1846web.routes1846web import app, get_data_file, mail
-from routes1846web.calculator import CancellableJob, cancel_job, redis_conn
+from routes1846web.calculator import CancellableJob, cancel_job, redis_conn, start_job
 from routes1846web.logger import get_logger, init_logger, set_log_format
 
 
@@ -152,7 +152,8 @@ def calculate():
 
     railroads_state_rows += [[name, "removed"] for name in removed_railroads]
 
-    job = CALCULATOR_QUEUE.enqueue(calculate_worker, railroads_state_rows, private_companies_rows, board_state_rows, railroad_name, job_timeout="5m")
+    # job = CALCULATOR_QUEUE.enqueue(calculate_worker, railroads_state_rows, private_companies_rows, board_state_rows, railroad_name, job_timeout="5m")
+    job = start_job(calculate_worker, railroads_state_rows, private_companies_rows, board_state_rows, railroad_name, job_timeout="5m")
 
     return jsonify({"jobId": job.id})
 
