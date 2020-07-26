@@ -5,6 +5,8 @@
     <span style="display: inline-block; font-size: 2rem; font-family: inherit; font-weight: 500;">1846 Route Calculator</span>
     <span>&nbsp;</span>
     <button type="button" class="btn btn-sm btn-outline-info align-middle align-text-bottom" data-toggle="modal" data-target="#aboutModal">About</button>
+    <span>&nbsp;</span>
+    <span style="vertical-align: text-top"><a href="#" data-toggle="modal" data-target="#migration-modal" style="vertical-align: bottom">Migrate to 18xx Route Finder</a></span>
     <button id="general-report-issue-open" class="float-right btn btn-outline-danger" data-toggle="modal" data-target="#general-report-issue-modal" style="margin-right: 25px;">Report Issue</button>
 </div>
 <div id="controls" style="margin-bottom: 10px; width: 100%; text-align: center">
@@ -130,6 +132,32 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" type="button" id="global-import-save">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="migration-modal" tabindex="-1" role="dialog" aria-labelledby="migration-modal" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Migrate to 18xx?</h2>
+            </div>
+            <div class="modal-body">
+                <p>
+                    This app has been deprecated in favor of <a href="https://routes18xx.herokuapp.com/">18xx Route Finder</a>.
+                </p>
+                <p>
+                    18xx Router Finder is a fork of this app, so its interface and operation are exactly the same. It also fixes some bugs an implements some minor new features. Those changes will not be backported to this app.
+                </p>
+                <p>
+                    If you'd like to bring your current game data into 18xx Router Finder, click "Migrate!" below. It will perform the required conversions on your game data and load it into the new app. You can also dismiss this modal permanently ("Dismiss"), or just close it until you next visit the page ("Remind Me Later").
+                </p>
+                <div id="migration-message"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="migrate-dismiss" class="btn btn-outline-danger" type="button">Dismiss</button>
+                <button id="migrate-later" class="btn btn-outline-dark" type="button">Remind Me Later</button>
+                <button id="migrate-start" class="btn btn-success" type="button">Migrate!</button>
             </div>
         </div>
     </div>
@@ -306,6 +334,44 @@ $("#global-import-export-modal").on("show.bs.modal", function() {
 
     enableSubmitViaKeyboard($("#global-import-export-modal"), $("#global-import-save"));
 });
+
+$("#migrate-dismiss").click(() => {
+    localStorage.showMigrationModal = false;
+    $("#migration-modal").modal('hide');
+});
+
+$("#migrate-later").click(() => {
+    $("#migration-modal").modal('hide');
+});
+
+$("#migrate-start").click(() => {
+    var migrationData = {
+        "placedTilesTable": localStorage.placedTilesTable,
+        "removedRailroadsTable": localStorage.removedRailroadsTable,
+        "railroadsTable": localStorage.railroadsTable,
+        "privateCompaniesTable": localStorage.privateCompaniesTable,
+        "hideCityPaths": localStorage.hideCityPaths
+    };
+    $.post("{{ url_for('migrate') }}", {migrationData: JSON.stringify(migrationData)})
+        .done(response => {
+            $("#migration-message")
+                .empty()
+                .css("color", "green")
+                .text(`Success! Redirecting you...`);
+            localStorage.showMigrationModal = false;
+            window.location.href = `http://localhost:8080/game/1846/migrate/complete?id=${response["id"]}`;
+        })
+        .fail(resultObj => {
+            $("#migration-message")
+                .empty()
+                .css("color", "red")
+                .text(`Migration error: ${resultObj["responseJSON"]["error"]}`);
+        });
+});
+
+if (isEmpty(localStorage.showMigrationModal) || localStorage.showMigrationModal) {
+    $("#migration-modal").modal("show");
+}
 
 {% include "js/placed-tiles-map.js.html" %}
 
