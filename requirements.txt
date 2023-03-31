@@ -4,7 +4,7 @@ Flask == 1.1.2
 Flask-WTF==0.14.3
 Flask-Mail == 0.9.1
 
-redis == 2.10.6
+redis == 4.4.4
 rq == 0.12
 
 requests == 2.24.0
