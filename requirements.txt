@@ -7,4 +7,4 @@ Flask-Mail == 0.9.1
 redis == 2.10.6
 rq == 0.12
 
-requests == 2.24.0
+requests == 2.31.0
